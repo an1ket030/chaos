@@ -120,6 +120,10 @@ OVERALL ROADMAP:  [======--------------------------] 21% (18/86 Total Milestones
   - Server delays match event streaming by 3.5s to align seamlessly with client mount.
 - [x] **Backend Match Results API** (`apps/server/src/routes/room.router.ts`, `room.service.ts`)
   - `GET /rooms/:code/results` endpoint calculating final standings, squad OVRs, and awards from Redis room state.
+- [x] **Squad Finalization Dual-Path & Rate Limit Hardening** (`room.router.ts`, `socket.gateway.ts`, `SquadBuilderPage.tsx`, `App.tsx`, `SocketContext.tsx`)
+  - Built `POST /rooms/:code/finalize-squad` endpoint complementing WebSocket `squad:finalize` for zero dropped submissions.
+  - Eliminated global rate limiting on localhost dev routes and prevented auth token purging on non-401 responses.
+  - Stabilized countdown listeners with `useRef` and established reliable 2.5s polling fallback ensuring synchronized 3s countdown transition even across transient disconnects.
 
 #### 1.8 Database, Progression & Architecture
 - [x] **PostgreSQL Match Persistence** (`apps/server/src/modules/match/match.service.ts`)
