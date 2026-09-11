@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import { setRoomState, getRoomState, deleteRoomState } from '../../config/redis';
+import { setRoomState, getRoomState, deleteRoomState, redis } from '../../config/redis';
 import type { RoomState, RoomSettings, PlayerState } from '@chaos/shared';
 import { PLAYERS, getPlayersForEdition, AUCTION_POSITIONS } from '@chaos/shared';
 
@@ -68,6 +68,44 @@ export async function createRoom(
 
 export async function getRoom(code: string): Promise<RoomState | null> {
   return getRoomState<RoomState>(code);
+}
+
+export async function getPublicRooms(): Promise<Array<{
+  roomId: string; code: string; edition: string;
+  playerCount: number; maxPlayers: number; status: string;
+}>> {
+  try {
+    const keys = await redis.keys('room:*');
+    if (keys.length === 0) return [];
+
+    const pipeline = redis.pipeline();
+    keys.forEach(k => pipeline.get(k));
+    const results = await pipeline.exec();
+
+    const rooms: any[] = [];
+    for (const [err, raw] of (results ?? [])) {
+      if (err || !raw) continue;
+      try {
+        const state: RoomState = JSON.parse(raw as string);
+        if (
+          state.settings?.visibility !== 'private' &&
+          (state.status === 'WAITING' || state.status === 'BIDDING')
+        ) {
+          rooms.push({
+            roomId: state.roomId,
+            code: state.code,
+            edition: state.settings.edition,
+            playerCount: state.players.length,
+            maxPlayers: state.settings.maxPlayers,
+            status: state.status,
+          });
+        }
+      } catch {}
+    }
+    return rooms;
+  } catch {
+    return [];
+  }
 }
 
 export async function joinRoom(

@@ -25,7 +25,7 @@ export interface ServerToClientEvents {
   'system:round_start': (data: { round: number; totalRounds: number }) => void;
 
   // Bidding
-  'auction:bid_update': (data: { currentBid: number; bidderId: string; bidderUsername: string; timeLeft: number }) => void;
+  'auction:bid_update': (data: { currentBid: number; bidderId: string | null; bidderUsername: string | null; timeLeft: number; skips?: string[] }) => void;
   'auction:sold': (data: { playerId: string; playerName: string; winnerId: string; winnerUsername: string; finalPrice: number }) => void;
   'auction:no_bids': (data: { playerId: string; assignedToUserId: string }) => void;
   'auction:auto_fill': (data: { userId: string; players: Player[] }) => void;
@@ -89,6 +89,7 @@ export interface ClientToServerEvents {
 
   // Bidding (player-initiated)
   'auction:bid': (data: { amount: number }, callback: (result: { success: boolean; error?: string }) => void) => void;
+  'auction:skip': (callback: (result: { success: boolean; error?: string }) => void) => void;
 
   // Squad builder
   'squad:finalize': (data: FinalizedSquad, callback: (result: { success: boolean; error?: string }) => void) => void;

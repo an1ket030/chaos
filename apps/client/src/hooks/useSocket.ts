@@ -6,12 +6,14 @@ import { useAuctionStore } from '../store/auctionStore';
 
 type AppSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
 
+const SERVER_URL = import.meta.env.VITE_SERVER_URL ?? 'http://localhost:3001';
+
 // Module-level singleton
 let socketInstance: AppSocket | null = null;
 
 function getOrCreateSocket(): AppSocket {
   if (!socketInstance) {
-    socketInstance = io('http://localhost:3001', {
+    socketInstance = io(SERVER_URL, {
       autoConnect: false,
     });
   }

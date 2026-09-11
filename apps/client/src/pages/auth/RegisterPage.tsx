@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Input } from '../../components/ui/Input';
-import { Button } from '../../components/ui/Button';
+import { motion } from 'framer-motion';
 import { api } from '../../lib/api';
 import { useAuthStore } from '../../store/authStore';
 
@@ -18,7 +17,6 @@ export function RegisterPage() {
     e.preventDefault();
     setIsLoading(true);
     setError('');
-
     try {
       const { data } = await api.post('/auth/register', { username, email, password });
       localStorage.setItem('accessToken', data.tokens.accessToken);
@@ -26,66 +24,128 @@ export function RegisterPage() {
       setUser(data.user);
       navigate('/');
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to register');
+      setError(err.response?.data?.error || 'Failed to register. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-dark relative overflow-hidden">
-      {/* Background decorations */}
-      <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0">
-        <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-primary/10 blur-[120px]"></div>
-        <div className="absolute bottom-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-purple-500/10 blur-[120px]"></div>
-      </div>
+    <div
+      className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden"
+      style={{ background: '#080C12' }}
+    >
+      {/* Ambient */}
+      <div className="absolute top-0 right-1/4 w-[500px] h-[500px] rounded-full pointer-events-none"
+        style={{ background: 'radial-gradient(circle, rgba(155,93,229,0.07) 0%, transparent 70%)' }} />
+      <div className="absolute bottom-0 left-1/4 w-[500px] h-[500px] rounded-full pointer-events-none"
+        style={{ background: 'radial-gradient(circle, rgba(255,107,43,0.06) 0%, transparent 70%)' }} />
 
-      <div className="w-full max-w-md relative z-10 bg-dark-elevated/80 backdrop-blur-xl border border-white/10 p-8 rounded-2xl shadow-2xl">
+      <motion.div
+        initial={{ opacity: 0, y: 24 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: [0.2, 0, 0.2, 1] }}
+        className="w-full max-w-md relative z-10"
+        style={{
+          background: 'rgba(15,21,32,0.9)',
+          backdropFilter: 'blur(20px)',
+          border: '1px solid rgba(255,255,255,0.08)',
+          borderRadius: '20px',
+          padding: '40px',
+        }}
+      >
+        {/* Logo */}
         <div className="text-center mb-10">
-          <h1 className="text-4xl font-black tracking-tighter uppercase mb-2 text-transparent bg-clip-text bg-gradient-to-r from-primary to-green-400">
-            Join The Club
-          </h1>
-          <p className="text-gray-400 tracking-widest text-sm uppercase">Create Your Manager Profile</p>
+          <div
+            className="font-display text-5xl mb-2 tracking-wider"
+            style={{ color: '#FF6B2B', textShadow: '0 0 30px rgba(255,107,43,0.4)' }}
+          >
+            DRAFTWAR
+          </div>
+          <p className="font-heading text-xl font-bold" style={{ color: '#8A95A8' }}>
+            Create Your Manager Profile
+          </p>
         </div>
 
-        {error && <div className="mb-6 p-3 bg-red-500/10 border border-red-500/50 rounded-lg text-red-500 text-sm font-bold text-center">{error}</div>}
+        {error && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            className="mb-6 px-4 py-3 rounded-lg text-sm font-bold text-center"
+            style={{ background: 'rgba(255,59,59,0.1)', border: '1px solid rgba(255,59,59,0.4)', color: '#FF3B3B' }}
+          >
+            {error}
+          </motion.div>
+        )}
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <Input 
-            label="Manager Name (Username)" 
-            type="text" 
-            value={username} 
-            onChange={e => setUsername(e.target.value.replace(/[^a-zA-Z0-9_]/g, ''))} 
-            placeholder="e.g. Pep_Guardiola"
-            maxLength={32}
-            required
-          />
-          <Input 
-            label="Email" 
-            type="email" 
-            value={email} 
-            onChange={e => setEmail(e.target.value)} 
-            placeholder="you@example.com"
-            required
-          />
-          <Input 
-            label="Password" 
-            type="password" 
-            value={password} 
-            onChange={e => setPassword(e.target.value)} 
-            placeholder="Minimum 8 characters"
-            minLength={8}
-            required
-          />
-          <Button type="submit" className="w-full !bg-[#C8FF00] !text-black hover:!bg-[#b8ef00] font-black tracking-widest" size="lg" isLoading={isLoading}>
-            Create Account
-          </Button>
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div>
+            <label className="dw-label block mb-2">Manager Name</label>
+            <input
+              type="text"
+              value={username}
+              onChange={e => setUsername(e.target.value.replace(/[^a-zA-Z0-9_]/g, ''))}
+              placeholder="e.g. Pep_Guardiola"
+              maxLength={32}
+              required
+              className="dw-input"
+            />
+            <p className="mt-1 text-xs" style={{ color: '#3A4458' }}>Letters, numbers, underscores only</p>
+          </div>
+          <div>
+            <label className="dw-label block mb-2">Email</label>
+            <input
+              type="email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              placeholder="you@example.com"
+              required
+              className="dw-input"
+            />
+          </div>
+          <div>
+            <label className="dw-label block mb-2">Password</label>
+            <input
+              type="password"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              placeholder="Minimum 8 characters"
+              minLength={8}
+              required
+              className="dw-input"
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="w-full py-4 rounded-xl font-heading font-bold text-base uppercase tracking-widest transition-all duration-150 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{
+              background: isLoading ? '#CC5522' : '#FF6B2B',
+              color: 'white',
+              boxShadow: isLoading ? 'none' : '0 0 24px rgba(255,107,43,0.4)',
+            }}
+          >
+            {isLoading ? (
+              <span className="flex items-center justify-center gap-2">
+                <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                Creating account...
+              </span>
+            ) : 'Enter The War'}
+          </button>
         </form>
 
-        <div className="mt-8 text-center text-gray-400 text-sm">
-          Already have an account? <Link to="/login" className="text-primary hover:underline font-bold">Sign In</Link>
+        <div className="mt-8 text-center text-sm" style={{ color: '#8A95A8' }}>
+          Already drafted?{' '}
+          <Link
+            to="/login"
+            className="font-bold transition-colors"
+            style={{ color: '#FF6B2B' }}
+          >
+            Sign in
+          </Link>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }

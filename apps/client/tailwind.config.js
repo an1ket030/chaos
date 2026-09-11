@@ -4,46 +4,74 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Original aliases
-        bg: '#0d0d0d',
-        surface: '#141414',
-        elevated: '#1a1a1a',
-        accent: '#C8FF00',
-        'accent-dim': '#9FCC00',
-        muted: '#888888',
-        chaos: '#FF4444',
-        gold: '#FFD700',
-        bronze: '#CD7F32',
-        silver: '#C0C0C0',
-        // Component aliases (dark/primary naming)
+        // DraftWar Design Tokens
+        bg: '#080C12',
+        surface: '#0F1520',
+        elevated: '#161E2E',
+        // Brand colors
+        fire: {
+          DEFAULT: '#FF6B2B',
+          dim: '#CC5522',
+          glow: 'rgba(255,107,43,0.35)',
+        },
+        steel: '#3D8EFF',
+        'dw-gold': {
+          DEFAULT: '#E8B84B',
+          glow: 'rgba(232,184,75,0.35)',
+        },
+        chaos: {
+          DEFAULT: '#9B5DE5',
+          glow: 'rgba(155,93,229,0.35)',
+        },
+        danger: '#FF3B3B',
+        win: '#2ECC71',
+        // Text tokens
+        muted: '#8A95A8',
+        ghost: '#3A4458',
+        // Legacy aliases kept for backward compat
         dark: {
-          DEFAULT: '#0d0d0d',
-          surface: '#141414',
-          elevated: '#1a1a1a',
+          DEFAULT: '#080C12',
+          surface: '#0F1520',
+          elevated: '#161E2E',
         },
         primary: {
-          DEFAULT: '#C8FF00',
-          dim: '#9FCC00',
+          DEFAULT: '#FF6B2B',
+          dim: '#CC5522',
         },
-        secondary: '#888888',
+        secondary: '#8A95A8',
+        // Card tier colors
+        gold: '#E8B84B',
+        silver: '#8A95A8',
+        bronze: '#CD7F32',
       },
       fontFamily: {
-        heading: ['Barlow Condensed', 'Bebas Neue', 'sans-serif'],
-        body: ['Inter', 'DM Sans', 'sans-serif'],
+        display: ['Bebas Neue', 'sans-serif'],
+        heading: ['Barlow Condensed', 'sans-serif'],
+        body: ['Inter', 'sans-serif'],
         mono: ['JetBrains Mono', 'monospace'],
+      },
+      borderRadius: {
+        DEFAULT: '8px',
+        lg: '12px',
+        xl: '16px',
+        '2xl': '20px',
+        '3xl': '24px',
       },
       animation: {
         'spin-wheel': 'spin-wheel 4s cubic-bezier(0.17, 0.67, 0.12, 0.99) forwards',
-        'card-flip': 'card-flip 0.8s ease-in-out forwards',
-        'bid-tick': 'bid-tick 0.3s ease-out',
+        'card-flip': 'card-flip 0.7s ease-in-out forwards',
+        'bid-pulse': 'bid-pulse 0.3s ease-out',
         'sold-slam': 'sold-slam 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)',
-        'chaos-overlay': 'chaos-overlay 0.4s ease-out',
+        'chaos-wash': 'chaos-wash 0.4s ease-out',
         'broke-stamp': 'broke-stamp 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)',
-        'slide-in-right': 'slide-in-right 0.4s ease-out',
-        'pulse-glow': 'pulse-glow 1.5s ease-in-out infinite',
+        'slide-up': 'slide-up 0.35s cubic-bezier(0.2, 0, 0.2, 1)',
+        'slide-in-right': 'slide-in-right 0.35s cubic-bezier(0.2, 0, 0.2, 1)',
+        'glow-pulse': 'glow-pulse 2s ease-in-out infinite',
         'confetti-fall': 'confetti-fall 3s linear forwards',
         'number-tick': 'number-tick 0.2s ease-out',
-        'shake': 'shake 0.6s cubic-bezier(.36,.07,.19,.97)',
+        'shake': 'shake 0.5s cubic-bezier(.36,.07,.19,.97)',
+        'badge-pop': 'badge-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)',
+        'float': 'float 3s ease-in-out infinite',
       },
       keyframes: {
         'spin-wheel': {
@@ -51,43 +79,46 @@ export default {
           '100%': { transform: 'rotate(1440deg)' },
         },
         'card-flip': {
-          '0%': { transform: 'rotateY(0deg)' },
-          '50%': { transform: 'rotateY(90deg)' },
-          '100%': { transform: 'rotateY(0deg)' },
+          '0%': { transform: 'rotateY(-90deg)', opacity: '0' },
+          '100%': { transform: 'rotateY(0deg)', opacity: '1' },
         },
-        'bid-tick': {
-          '0%': { transform: 'scale(1.0)', color: '#C8FF00' },
-          '50%': { transform: 'scale(1.2)', color: '#C8FF00' },
-          '100%': { transform: 'scale(1.0)', color: '#C8FF00' },
+        'bid-pulse': {
+          '0%': { transform: 'scale(1)' },
+          '40%': { transform: 'scale(1.15)' },
+          '100%': { transform: 'scale(1)' },
         },
         'sold-slam': {
           '0%': { transform: 'scale(0) rotate(-10deg)', opacity: '0' },
           '70%': { transform: 'scale(1.1) rotate(2deg)', opacity: '1' },
-          '100%': { transform: 'scale(1) rotate(0deg)', opacity: '1' },
+          '100%': { transform: 'scale(1) rotate(-4deg)', opacity: '1' },
         },
-        'chaos-overlay': {
+        'chaos-wash': {
           '0%': { opacity: '0', backdropFilter: 'blur(0px)' },
-          '100%': { opacity: '1', backdropFilter: 'blur(8px)' },
+          '100%': { opacity: '1', backdropFilter: 'blur(10px)' },
         },
         'broke-stamp': {
           '0%': { transform: 'scale(3) rotate(-15deg)', opacity: '0' },
           '60%': { transform: 'scale(0.95) rotate(3deg)', opacity: '1' },
-          '100%': { transform: 'scale(1) rotate(-5deg)', opacity: '1' },
+          '100%': { transform: 'scale(1) rotate(-3deg)', opacity: '1' },
+        },
+        'slide-up': {
+          '0%': { transform: 'translateY(16px)', opacity: '0' },
+          '100%': { transform: 'translateY(0)', opacity: '1' },
         },
         'slide-in-right': {
           '0%': { transform: 'translateX(100%)', opacity: '0' },
           '100%': { transform: 'translateX(0)', opacity: '1' },
         },
-        'pulse-glow': {
-          '0%, 100%': { boxShadow: '0 0 5px rgba(200,255,0,0.3)' },
-          '50%': { boxShadow: '0 0 20px rgba(200,255,0,0.8), 0 0 40px rgba(200,255,0,0.4)' },
+        'glow-pulse': {
+          '0%, 100%': { boxShadow: '0 0 8px rgba(255,107,43,0.3)' },
+          '50%': { boxShadow: '0 0 24px rgba(255,107,43,0.7), 0 0 48px rgba(255,107,43,0.3)' },
         },
         'confetti-fall': {
           '0%': { transform: 'translateY(-100px) rotate(0deg)', opacity: '1' },
           '100%': { transform: 'translateY(100vh) rotate(720deg)', opacity: '0' },
         },
         'number-tick': {
-          '0%': { transform: 'translateY(-10px)', opacity: '0' },
+          '0%': { transform: 'translateY(-8px)', opacity: '0' },
           '100%': { transform: 'translateY(0)', opacity: '1' },
         },
         'shake': {
@@ -95,6 +126,15 @@ export default {
           '20%, 80%': { transform: 'translate3d(2px, 0, 0)' },
           '30%, 50%, 70%': { transform: 'translate3d(-4px, 0, 0)' },
           '40%, 60%': { transform: 'translate3d(4px, 0, 0)' },
+        },
+        'badge-pop': {
+          '0%': { transform: 'scale(0)', opacity: '0' },
+          '70%': { transform: 'scale(1.15)', opacity: '1' },
+          '100%': { transform: 'scale(1)', opacity: '1' },
+        },
+        'float': {
+          '0%, 100%': { transform: 'translateY(0)' },
+          '50%': { transform: 'translateY(-8px)' },
         },
       },
     },

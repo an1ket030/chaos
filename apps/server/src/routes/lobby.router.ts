@@ -18,6 +18,18 @@ lobbyRouter.get('/leaderboard', async (_req, res) => {
   }
 });
 
+// GET /lobby/rooms — returns live public rooms for the room browser
+lobbyRouter.get('/rooms', async (_req, res) => {
+  try {
+    const { getPublicRooms } = await import('../modules/room/room.service');
+    const rooms = await getPublicRooms();
+    res.json({ rooms });
+  } catch (err) {
+    // Graceful: if the function doesn't exist yet, return empty
+    res.json({ rooms: [] });
+  }
+});
+
 // GET /lobby/games/recent
 lobbyRouter.get('/games/recent', async (_req, res) => {
   try {

@@ -15,217 +15,303 @@
   }
 
   body {
-    background-color: #0d0d0d;
-    color: #ffffff;
-    font-family: 'Inter', 'DM Sans', sans-serif;
+    background-color: #080C12;
+    color: #F0F4FF;
+    font-family: 'Inter', sans-serif;
     min-height: 100vh;
     overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   h1, h2, h3, h4, h5, h6 {
     font-family: 'Barlow Condensed', sans-serif;
     letter-spacing: 0.02em;
     text-transform: uppercase;
+    color: #F0F4FF;
   }
 
-  /* Custom scrollbar */
-  ::-webkit-scrollbar {
-    width: 4px;
-    height: 4px;
-  }
-  ::-webkit-scrollbar-track {
-    background: #141414;
-  }
-  ::-webkit-scrollbar-thumb {
-    background: rgba(200, 255, 0, 0.3);
-    border-radius: 2px;
-  }
-  ::-webkit-scrollbar-thumb:hover {
-    background: rgba(200, 255, 0, 0.6);
-  }
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: #0F1520; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,107,43,0.3); border-radius: 2px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(255,107,43,0.6); }
+
+  :focus-visible { outline: 2px solid #FF6B2B; outline-offset: 2px; }
+}
+
+/* =====================================================
+   DraftWar CSS Variables
+   ===================================================== */
+:root {
+  --dw-void: #080C12;
+  --dw-surface: #0F1520;
+  --dw-elevated: #161E2E;
+  --dw-border: rgba(255,255,255,0.07);
+  --dw-border-active: rgba(255,255,255,0.18);
+  --dw-fire: #FF6B2B;
+  --dw-fire-dim: #CC5522;
+  --dw-fire-glow: rgba(255,107,43,0.35);
+  --dw-steel: #3D8EFF;
+  --dw-gold: #E8B84B;
+  --dw-gold-glow: rgba(232,184,75,0.35);
+  --dw-chaos: #9B5DE5;
+  --dw-chaos-glow: rgba(155,93,229,0.35);
+  --dw-danger: #FF3B3B;
+  --dw-success: #2ECC71;
+  --dw-text-primary: #F0F4FF;
+  --dw-text-secondary: #8A95A8;
+  --dw-text-ghost: #3A4458;
 }
 
 @layer components {
+
   /* ===== PLAYER CARD TIERS ===== */
   .card-icon {
-    background: linear-gradient(135deg, #1a1a1a 0%, #0d0d0d 100%);
-    border: 2px solid #C8FF00;
-    box-shadow: 0 0 20px rgba(200,255,0,0.4), inset 0 0 30px rgba(200,255,0,0.05);
+    background: linear-gradient(135deg, #1E2A3A 0%, #0F1520 100%);
+    border: 2px solid var(--dw-fire);
+    box-shadow: 0 0 20px var(--dw-fire-glow);
   }
   .card-special {
-    background: linear-gradient(135deg, #2d1b4e 0%, #1a0d33 100%);
-    border: 2px solid #9B59B6;
-    box-shadow: 0 0 20px rgba(155,89,182,0.4);
+    background: linear-gradient(135deg, #1E1040 0%, #100830 100%);
+    border: 2px solid var(--dw-chaos);
+    box-shadow: 0 0 20px var(--dw-chaos-glow);
   }
   .card-rare-gold {
-    background: linear-gradient(135deg, #4a2400 0%, #2d1600 100%);
+    background: linear-gradient(135deg, #2A1800 0%, #1A1000 100%);
     border: 2px solid #FF8C00;
     box-shadow: 0 0 15px rgba(255,140,0,0.4);
   }
   .card-gold {
-    background: linear-gradient(135deg, #3d2e00 0%, #261d00 100%);
-    border: 2px solid #FFD700;
-    box-shadow: 0 0 12px rgba(255,215,0,0.3);
+    background: linear-gradient(135deg, #1E1600 0%, #141000 100%);
+    border: 2px solid var(--dw-gold);
+    box-shadow: 0 0 12px var(--dw-gold-glow);
   }
   .card-silver {
-    background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
-    border: 2px solid #C0C0C0;
-    box-shadow: 0 0 10px rgba(192,192,192,0.2);
+    background: linear-gradient(135deg, #1A1E2A 0%, #111520 100%);
+    border: 2px solid #8A95A8;
   }
   .card-bronze {
-    background: linear-gradient(135deg, #2d1500 0%, #1a0d00 100%);
+    background: linear-gradient(135deg, #1A1000 0%, #100A00 100%);
     border: 2px solid #CD7F32;
-    box-shadow: 0 0 8px rgba(205,127,50,0.2);
   }
 
   /* ===== PITCH ===== */
   .pitch-surface {
-    background: linear-gradient(
-      180deg,
-      #1a3d1a 0%,
-      #1e4a1e 8%,
-      #1a3d1a 16%,
-      #1e4a1e 24%,
-      #1a3d1a 32%,
-      #1e4a1e 40%,
-      #1a3d1a 48%,
-      #1e4a1e 56%,
-      #1a3d1a 64%,
-      #1e4a1e 72%,
-      #1a3d1a 80%,
-      #1e4a1e 88%,
-      #1a3d1a 100%
+    background: linear-gradient(180deg,
+      #0D2B0D 0%,#103410 8%,#0D2B0D 16%,#103410 24%,
+      #0D2B0D 32%,#103410 40%,#0D2B0D 48%,#103410 56%,
+      #0D2B0D 64%,#103410 72%,#0D2B0D 80%,#103410 88%,
+      #0D2B0D 100%
     );
   }
 
-  /* ===== GLASSMORPHISM ===== */
+  /* ===== GLASS ===== */
   .glass {
-    background: rgba(20, 20, 20, 0.85);
+    background: rgba(15,21,32,0.85);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(255,255,255,0.08);
+    border: 1px solid var(--dw-border);
   }
-  .glass-accent {
-    background: rgba(200, 255, 0, 0.05);
+  .glass-fire {
+    background: rgba(255,107,43,0.06);
     backdrop-filter: blur(12px);
-    border: 1px solid rgba(200,255,0,0.2);
+    border: 1px solid rgba(255,107,43,0.25);
+  }
+  .glass-chaos {
+    background: rgba(155,93,229,0.06);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(155,93,229,0.25);
   }
 
   /* ===== BUTTONS ===== */
   .btn-primary {
-    @apply bg-accent text-bg font-heading font-bold uppercase tracking-wider px-6 py-3 rounded-sm
-           transition-all duration-200 hover:bg-accent-dim hover:scale-105 active:scale-95
-           disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100;
+    @apply font-heading font-bold uppercase tracking-wider px-6 py-3 rounded-lg
+           transition-all duration-150 active:scale-95
+           disabled:opacity-40 disabled:cursor-not-allowed;
+    background: var(--dw-fire);
+    color: white;
+    box-shadow: 0 0 20px var(--dw-fire-glow);
+  }
+  .btn-primary:hover:not(:disabled) {
+    background: #FF8050;
+    transform: scale(1.03);
   }
   .btn-secondary {
-    @apply border border-accent text-accent font-heading font-bold uppercase tracking-wider px-6 py-3 rounded-sm
-           transition-all duration-200 hover:bg-accent hover:text-bg hover:scale-105 active:scale-95
+    @apply font-heading font-bold uppercase tracking-wider px-6 py-3 rounded-lg
+           transition-all duration-150 active:scale-95
            disabled:opacity-40 disabled:cursor-not-allowed;
+    background: transparent;
+    border: 1px solid var(--dw-fire);
+    color: var(--dw-fire);
   }
-  .btn-danger {
-    @apply bg-chaos text-white font-heading font-bold uppercase tracking-wider px-6 py-3 rounded-sm
-           transition-all duration-200 hover:bg-red-600 hover:scale-105 active:scale-95
+  .btn-secondary:hover:not(:disabled) { background: var(--dw-fire); color: white; transform: scale(1.03); }
+  .btn-ghost {
+    @apply font-heading font-bold uppercase tracking-wider px-6 py-3 rounded-lg
+           transition-all duration-150 active:scale-95
            disabled:opacity-40 disabled:cursor-not-allowed;
+    background: transparent;
+    border: 1px solid var(--dw-border-active);
+    color: var(--dw-text-secondary);
+  }
+  .btn-ghost:hover:not(:disabled) { color: var(--dw-text-primary); }
+  .btn-danger {
+    @apply font-heading font-bold uppercase tracking-wider px-6 py-3 rounded-lg
+           transition-all duration-150 active:scale-95
+           disabled:opacity-40 disabled:cursor-not-allowed;
+    background: var(--dw-danger);
+    color: white;
   }
 
   /* ===== BID BUTTONS ===== */
   .bid-btn {
-    @apply glass border border-white/10 text-white font-mono font-bold px-4 py-3 rounded
-           transition-all duration-150 hover:border-accent hover:text-accent hover:scale-105
-           active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed;
+    @apply glass font-mono font-bold px-4 py-3 rounded-lg
+           transition-all duration-150 active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed;
+    border: 1px solid var(--dw-border-active);
+    color: white;
   }
+  .bid-btn:hover:not(:disabled) { border-color: var(--dw-fire); color: var(--dw-fire); transform: scale(1.04); }
 
   /* ===== COMMENTARY FEED ===== */
-  .commentary-msg {
-    @apply text-xs font-mono py-1 px-2 border-l-2 border-transparent;
-  }
-  .commentary-info { @apply text-muted border-l-white/20; }
-  .commentary-sold { @apply text-accent border-l-accent font-bold; }
-  .commentary-chaos { @apply text-chaos border-l-chaos; }
-  .commentary-warning { @apply text-gold border-l-gold; }
-  .commentary-bankruptcy { @apply text-chaos border-l-chaos font-bold; }
+  .commentary-msg { @apply text-xs font-mono py-1 px-2 border-l-2 border-transparent; }
+  .commentary-info { color: var(--dw-text-secondary); border-left-color: var(--dw-border-active); }
+  .commentary-sold { color: var(--dw-gold); border-left-color: var(--dw-gold); font-weight: 700; }
+  .commentary-chaos { color: var(--dw-chaos); border-left-color: var(--dw-chaos); }
+  .commentary-warning { color: #FFD700; border-left-color: #FFD700; }
+  .commentary-bankruptcy { color: var(--dw-danger); border-left-color: var(--dw-danger); font-weight: 700; }
 
   /* ===== SQUAD SLOTS ===== */
   .squad-slot-empty {
-    @apply border-2 border-dashed border-white/20 rounded flex items-center justify-center
-           text-xs font-heading text-muted uppercase tracking-wider
-           transition-all duration-200;
+    @apply border-2 border-dashed rounded-lg flex items-center justify-center
+           text-xs font-heading uppercase tracking-wider transition-all duration-200;
+    border-color: var(--dw-border-active);
+    color: var(--dw-text-ghost);
   }
   .squad-slot-filled {
-    @apply border border-white/10 rounded overflow-hidden
-           transition-all duration-200 hover:border-accent/40;
+    @apply rounded-lg overflow-hidden transition-all duration-200;
+    border: 1px solid var(--dw-border);
   }
+  .squad-slot-filled:hover { border-color: rgba(255,107,43,0.4); }
 
   /* ===== BUDGET BAR ===== */
-  .budget-bar-full { @apply bg-accent transition-all duration-500; }
-  .budget-bar-low { @apply bg-yellow-500 transition-all duration-500; }
-  .budget-bar-critical { @apply bg-chaos transition-all duration-500 animate-pulse; }
+  .budget-bar-full { background: var(--dw-fire); transition: all 500ms ease; }
+  .budget-bar-low { background: var(--dw-gold); transition: all 500ms ease; }
+  .budget-bar-critical { background: var(--dw-danger); transition: all 500ms ease; animation: pulse 1s ease-in-out infinite; }
 
   /* ===== BADGES ===== */
   .badge-sold {
-    @apply bg-accent text-bg font-heading font-black text-2xl uppercase tracking-widest
-           px-6 py-2 rounded-sm transform rotate-[-5deg];
+    @apply font-heading font-black uppercase tracking-widest px-6 py-2 rounded-md;
+    background: var(--dw-gold);
+    color: #080C12;
+    transform: rotate(-4deg);
+    font-size: 1.5rem;
   }
   .badge-broke {
-    @apply bg-chaos text-white font-heading font-black text-2xl uppercase tracking-widest
-           px-6 py-2 rounded-sm transform rotate-[-3deg]
-           border-4 border-white;
+    @apply font-heading font-black uppercase tracking-widest px-6 py-2 rounded-md border-4 border-white;
+    background: var(--dw-danger);
+    color: white;
+    transform: rotate(-3deg);
+    font-size: 1.5rem;
   }
   .badge-banned {
-    @apply bg-chaos/20 border border-chaos text-chaos font-mono text-xs
-           px-3 py-1 rounded uppercase tracking-wide;
+    @apply font-mono text-xs px-3 py-1 rounded uppercase tracking-wide;
+    background: rgba(255,59,59,0.15);
+    border: 1px solid var(--dw-danger);
+    color: var(--dw-danger);
   }
   .badge-system-pick {
-    @apply bg-muted/20 border border-muted/40 text-muted font-mono text-xs
-           px-2 py-0.5 rounded uppercase tracking-wide;
+    @apply font-mono text-xs px-2 py-0.5 rounded uppercase tracking-wide;
+    background: rgba(138,149,168,0.15);
+    border: 1px solid rgba(138,149,168,0.4);
+    color: var(--dw-text-secondary);
+  }
+  .badge-chaos {
+    @apply font-mono text-xs px-3 py-1 rounded uppercase tracking-wide;
+    background: rgba(155,93,229,0.15);
+    border: 1px solid var(--dw-chaos);
+    color: var(--dw-chaos);
   }
 
-  /* ===== NEON GLOW ===== */
-  .glow-accent {
-    box-shadow: 0 0 10px rgba(200,255,0,0.5), 0 0 20px rgba(200,255,0,0.3);
+  /* ===== GLOWS ===== */
+  .glow-fire { box-shadow: 0 0 12px var(--dw-fire-glow), 0 0 24px rgba(255,107,43,0.15); }
+  .glow-chaos { box-shadow: 0 0 12px var(--dw-chaos-glow), 0 0 24px rgba(155,93,229,0.15); }
+  .glow-gold { box-shadow: 0 0 12px var(--dw-gold-glow), 0 0 24px rgba(232,184,75,0.15); }
+  .glow-danger { box-shadow: 0 0 12px rgba(255,59,59,0.4), 0 0 24px rgba(255,59,59,0.15); }
+  .winner-ring { box-shadow: 0 0 0 2px var(--dw-fire), 0 0 12px var(--dw-fire-glow); }
+
+  /* ===== SURFACE CARDS ===== */
+  .dw-card {
+    background: var(--dw-surface);
+    border: 1px solid var(--dw-border);
+    border-radius: 16px;
+    transition: border-color 200ms ease;
   }
-  .glow-chaos {
-    box-shadow: 0 0 10px rgba(255,68,68,0.5), 0 0 20px rgba(255,68,68,0.3);
-  }
-  .glow-gold {
-    box-shadow: 0 0 10px rgba(255,215,0,0.5), 0 0 20px rgba(255,215,0,0.3);
+  .dw-card:hover { border-color: var(--dw-border-active); }
+  .dw-card-elevated {
+    background: var(--dw-elevated);
+    border: 1px solid var(--dw-border);
+    border-radius: 16px;
   }
 
-  /* ===== WINNER RING ===== */
-  .bidder-ring {
-    @apply ring-2 ring-accent ring-offset-2 ring-offset-bg animate-pulse-glow;
+  /* ===== INPUTS ===== */
+  .dw-input {
+    @apply w-full rounded-lg font-mono transition-all duration-150;
+    background: var(--dw-void);
+    border: 1px solid var(--dw-border-active);
+    color: var(--dw-text-primary);
+    padding: 12px 16px;
+    font-size: 14px;
+  }
+  .dw-input:focus { outline: none; border-color: var(--dw-fire); box-shadow: 0 0 0 3px rgba(255,107,43,0.15); }
+  .dw-input::placeholder { color: var(--dw-text-ghost); }
+
+  .dw-label {
+    @apply uppercase font-bold tracking-widest;
+    font-family: 'Inter', sans-serif;
+    font-size: 10px;
+    color: var(--dw-text-secondary);
+    letter-spacing: 0.12em;
   }
 }
 
 @layer utilities {
-  .font-num {
-    font-family: 'JetBrains Mono', monospace;
-    font-variant-numeric: tabular-nums;
-  }
-  
-  /* 3D perspective for card flip */
+  .font-display { font-family: 'Bebas Neue', sans-serif; }
+  .font-heading { font-family: 'Barlow Condensed', sans-serif; }
+  .font-num { font-family: 'JetBrains Mono', monospace; font-variant-numeric: tabular-nums; }
+
   .perspective-1000 { perspective: 1000px; }
   .preserve-3d { transform-style: preserve-3d; }
   .backface-hidden { backface-visibility: hidden; }
   .rotate-y-180 { transform: rotateY(180deg); }
 
-  /* Text gradients */
-  .text-gradient-lime {
-    background: linear-gradient(135deg, #C8FF00, #9FCC00);
+  .text-gradient-fire {
+    background: linear-gradient(135deg, #FF6B2B, #FF9A5C);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
   .text-gradient-gold {
-    background: linear-gradient(135deg, #FFD700, #FF8C00);
+    background: linear-gradient(135deg, #E8B84B, #FFDF80);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
   .text-gradient-chaos {
-    background: linear-gradient(135deg, #FF4444, #FF8C00);
+    background: linear-gradient(135deg, #9B5DE5, #C77DFF);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
+  }
+  .text-gradient-war {
+    background: linear-gradient(135deg, #FF6B2B 0%, #E8B84B 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .bg-grid {
+    background-image:
+      linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+    background-size: 48px 48px;
   }
 }

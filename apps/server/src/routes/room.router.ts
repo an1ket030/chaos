@@ -44,3 +44,48 @@ roomRouter.get('/:code', requireAuth, async (req: AuthRequest, res) => {
     res.status(500).json({ error: 'Server error' });
   }
 });
+
+// GET /rooms/:code/results — get results for a completed room
+roomRouter.get('/:code/results', requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const { getRoom } = await import('../modules/room/room.service');
+    const room = await getRoom((req.params.code as string).toUpperCase());
+    if (!room) { res.status(404).json({ error: 'Room not found' }); return; }
+
+    // Build results from the room state
+    const startBudget = room.settings.startingBudget;
+    const standings = [...room.players]
+      .sort((a, b) => {
+        const rA = a.squad.reduce((sum, s) => sum + (s.player?.rating ?? 0), 0);
+        const rB = b.squad.reduce((sum, s) => sum + (s.player?.rating ?? 0), 0);
+        return rB - rA;
+      })
+      .map((p, idx) => {
+        const filledSlots = p.squad.filter(s => s.player).length;
+        const totalRating = p.squad.reduce((sum, s) => sum + (s.player?.rating ?? 0), 0);
+        const avgRating = filledSlots > 0 ? Math.round(totalRating / filledSlots) : 0;
+        const eloDeltas = [18, 6, -8, -16];
+        return {
+          userId: p.userId,
+          username: p.username,
+          avatarUrl: p.avatarUrl,
+          placement: idx + 1,
+          overallRating: avgRating,
+          budget: p.budget,
+          totalSpent: startBudget - p.budget,
+          filledSlots,
+          chaosCardsReceived: p.chaosCardsReceived,
+          squad: p.squad,
+          eloChange: eloDeltas[idx] >= 0 ? `+${eloDeltas[idx]}` : `${eloDeltas[idx] ?? -16}`,
+        };
+      });
+
+    res.json({
+      code: room.code,
+      edition: room.settings.edition,
+      standings,
+    });
+  } catch {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
