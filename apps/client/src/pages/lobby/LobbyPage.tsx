@@ -5,6 +5,8 @@ import { useAuthStore } from '../../store/authStore';
 import { useRoomStore } from '../../store/roomStore';
 import { Avatar } from '../../components/ui/Avatar';
 import { api } from '../../lib/api';
+import { OnboardingModal } from '../../components/onboarding/OnboardingModal';
+import { HelpCircle } from 'lucide-react';
 
 // ─── Edition definitions for the picker ─────────────────────────────────────
 const EDITIONS = [
@@ -340,6 +342,7 @@ export function LobbyPage() {
   const [joinCode, setJoinCode] = useState('');
   const [joinError, setJoinError] = useState('');
   const [showCreate, setShowCreate] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(() => !localStorage.getItem('draftwar_onboarding_seen'));
   const [publicRooms, setPublicRooms] = useState<any[]>([]);
   const [loadingRooms, setLoadingRooms] = useState(true);
 
@@ -403,7 +406,14 @@ export function LobbyPage() {
         </div>
 
         {user && (
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setShowOnboarding(true)}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-mono font-bold uppercase tracking-wider text-dw-fire bg-dw-fire/10 border border-dw-fire/30 hover:bg-dw-fire/20 transition-all active:scale-95"
+            >
+              <HelpCircle className="w-4 h-4 text-dw-fire" />
+              <span className="hidden sm:inline">Briefing</span>
+            </button>
             <button
               onClick={() => navigate(`/profile/${user.id}`)}
               className="flex items-center gap-3 px-4 py-2 rounded-xl transition-all"
@@ -601,6 +611,9 @@ export function LobbyPage() {
       <AnimatePresence>
         {showCreate && <CreateRoomModal onClose={() => setShowCreate(false)} />}
       </AnimatePresence>
+
+      {/* Onboarding Briefing Modal */}
+      <OnboardingModal isOpen={showOnboarding} onClose={() => setShowOnboarding(false)} />
     </div>
   );
 }

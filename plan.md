@@ -324,11 +324,12 @@ export const matchParticipants = pgTable('match_participants', {
 - [x] Overhaul `SimulationPage.tsx` with scoreboard and live event highlights.
 - [x] Complete rebuild of `ResultsPage.tsx` with winner hero, standings, match awards, and share mock.
 - [x] Backend room endpoints (`GET /lobby/rooms`, `GET /rooms/:code/results`).
-- [ ] Database match persistence (PostgreSQL schema + repository).
-- [ ] ELO calculation service and player history.
-- [ ] Profile page revamp with match records.
-- [ ] Centralized Socket Context with auto-reconnection.
-- [ ] Onboarding intro modal.
+- [x] Database match persistence (PostgreSQL schema + repository: `match.service.ts`).
+- [x] ELO calculation service and player history (`elo.service.ts`).
+- [x] Profile page revamp with match records (`ProfilePage.tsx`).
+- [x] Centralized Socket Context with auto-reconnection (`SocketContext.tsx`).
+- [x] Onboarding intro modal (`OnboardingModal.tsx`).
+- [x] Auth token refresh interceptor with queueing (`api.ts`).
 
 ### 🚀 Phase 2 — Premium V1 & Solo/Progression Systems (Weeks 7–12)
 *Objective: Build retention hooks, progression layers, and solo playability.*

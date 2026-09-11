@@ -11,14 +11,16 @@ import { ResultsPage } from './pages/results/ResultsPage';
 import { ProfilePage } from './pages/profile/ProfilePage';
 import { useAuthStore } from './store/authStore';
 import { api } from './lib/api';
+import { SocketProvider } from './context/SocketContext';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuthStore();
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: '#0d0d0d' }}>
-        <div className="w-12 h-12 border-4 border-t-transparent rounded-full animate-spin" style={{ borderColor: '#C8FF00', borderTopColor: 'transparent' }} />
+      <div className="min-h-screen flex flex-col items-center justify-center bg-dw-void text-dw-text-primary gap-4">
+        <div className="w-12 h-12 border-4 border-dw-border border-t-dw-fire rounded-full animate-spin" />
+        <span className="font-heading tracking-widest text-dw-text-secondary text-sm uppercase">Loading War Room...</span>
       </div>
     );
   }
@@ -47,19 +49,21 @@ export default function App() {
   }, []);
 
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
+    <SocketProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
 
-        <Route path="/" element={<ProtectedRoute><LobbyPage /></ProtectedRoute>} />
-        <Route path="/room/:code" element={<ProtectedRoute><WaitingRoomPage /></ProtectedRoute>} />
-        <Route path="/room/:code/auction" element={<ProtectedRoute><AuctionRoomPage /></ProtectedRoute>} />
-        <Route path="/room/:code/squad-builder" element={<ProtectedRoute><SquadBuilderPage /></ProtectedRoute>} />
-        <Route path="/room/:code/simulation" element={<ProtectedRoute><SimulationPage /></ProtectedRoute>} />
-        <Route path="/room/:code/results" element={<ProtectedRoute><ResultsPage /></ProtectedRoute>} />
-        <Route path="/profile/:id" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
-      </Routes>
-    </BrowserRouter>
+          <Route path="/" element={<ProtectedRoute><LobbyPage /></ProtectedRoute>} />
+          <Route path="/room/:code" element={<ProtectedRoute><WaitingRoomPage /></ProtectedRoute>} />
+          <Route path="/room/:code/auction" element={<ProtectedRoute><AuctionRoomPage /></ProtectedRoute>} />
+          <Route path="/room/:code/squad-builder" element={<ProtectedRoute><SquadBuilderPage /></ProtectedRoute>} />
+          <Route path="/room/:code/simulation" element={<ProtectedRoute><SimulationPage /></ProtectedRoute>} />
+          <Route path="/room/:code/results" element={<ProtectedRoute><ResultsPage /></ProtectedRoute>} />
+          <Route path="/profile/:id" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
+        </Routes>
+      </BrowserRouter>
+    </SocketProvider>
   );
 }

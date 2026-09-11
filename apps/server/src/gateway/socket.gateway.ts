@@ -14,6 +14,7 @@ import { createRoom, getRoom, joinRoom, setPlayerConnected } from '../modules/ro
 import { startAuction, handleBid, clearRoomTimers, handleSkip } from '../modules/auction/auction.engine';
 import { getRoomState, setRoomState } from '../config/redis';
 import { query } from '../config/db';
+import { persistMatchResult, calculateAwards } from '../modules/match/match.service';
 import { z } from 'zod';
 
 type IO = Server<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>;
@@ -353,120 +354,21 @@ async function runSimulation(io: IO, code: string, room: RoomState): Promise<voi
     awards,
   });
 
-  // Save game to DB
+  // Save game to DB with ELO updates and participant stats
   try {
-    await saveGameResult(room, allResults, winner.userId, awards);
+    await persistMatchResult({
+      room,
+      allResults,
+      winnerUserId: winner.userId,
+      awards,
+      standings: ranked,
+      finalizedSquads: finalizedSquads.get(code),
+    });
   } catch (err) {
-    console.error('Failed to save game result:', err);
+    console.error('Failed to persist game result:', err);
   }
 
   // Clean up
   finalizedSquads.delete(code);
   clearRoomTimers(code);
-}
-
-// ============================================================
-// AWARDS CALCULATION
-// ============================================================
-function calculateAwards(
-  room: RoomState,
-  _results: ReturnType<typeof simulateMatch>[],
-): Record<string, unknown> {
-  let mostExpensiveBuy: { playerName: string; cp: number; buyerUsername: string } | null = null;
-  let bestValue: { playerName: string; rating: number; cp: number; ratio: number; buyerUsername: string } | null = null;
-  let biggestRobbery: { playerName: string; baseValue: number; paidPrice: number; buyerUsername: string } | null = null;
-  let chaosMagnet: { username: string; chaosCardsReceived: number } | null = null;
-  let bankruptManager: { username: string } | null = null;
-
-  for (const player of room.players) {
-    // Chaos magnet
-    if (!chaosMagnet || player.chaosCardsReceived > chaosMagnet.chaosCardsReceived) {
-      chaosMagnet = { username: player.username, chaosCardsReceived: player.chaosCardsReceived };
-    }
-    // Bankrupt
-    if (player.isBankrupt) bankruptManager = { username: player.username };
-
-    for (const slot of player.squad) {
-      if (!slot.player) continue;
-      const price = slot.purchasePrice;
-      const rating = slot.player.rating;
-      const baseValue = slot.player.baseValue;
-
-      // Most expensive
-      if (!mostExpensiveBuy || price > mostExpensiveBuy.cp) {
-        mostExpensiveBuy = { playerName: slot.player.name, cp: price, buyerUsername: player.username };
-      }
-      // Best value (highest rating/price ratio, minimum 1 CP paid)
-      if (price > 0) {
-        const ratio = rating / price;
-        if (!bestValue || ratio > bestValue.ratio) {
-          bestValue = { playerName: slot.player.name, rating, cp: price, ratio, buyerUsername: player.username };
-        }
-      }
-      // Biggest robbery (paid much less than base value)
-      if (price < baseValue && (!biggestRobbery || (baseValue - price) > (biggestRobbery.baseValue - biggestRobbery.paidPrice))) {
-        biggestRobbery = { playerName: slot.player.name, baseValue, paidPrice: price, buyerUsername: player.username };
-      }
-    }
-  }
-
-  return { mostExpensiveBuy, bestValue, biggestRobbery, chaosMagnet, bankruptManager };
-}
-
-// ============================================================
-// SAVE GAME TO POSTGRES
-// ============================================================
-async function saveGameResult(
-  room: RoomState,
-  results: ReturnType<typeof simulateMatch>[],
-  winnerId: string,
-  awards: Record<string, unknown>,
-): Promise<void> {
-  const gameId = (await query<{ id: string }>(
-    `INSERT INTO games (room_code, edition, mode, winner_id, settings, results, awards, player_count)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
-    [
-      room.code,
-      room.settings.edition,
-      room.settings.mode,
-      winnerId || null,
-      JSON.stringify(room.settings),
-      JSON.stringify(results),
-      JSON.stringify(awards),
-      room.players.length,
-    ],
-  ))[0]?.id;
-
-  if (!gameId) return;
-
-  // Save each participant
-  for (const player of room.players) {
-    const cpSpent = room.settings.startingBudget - player.budget;
-    await query(
-      `INSERT INTO game_participants (game_id, user_id, username, final_budget, squad, cp_spent, chaos_cards_received)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-      [
-        gameId,
-        player.userId,
-        player.username,
-        player.budget,
-        JSON.stringify(player.squad),
-        cpSpent,
-        player.chaosCardsReceived,
-      ],
-    );
-
-    // Update user stats
-    const isWinner = player.userId === winnerId;
-    await query(
-      `UPDATE users
-       SET games_played = games_played + 1,
-           games_won = games_won + $1,
-           total_cp_spent = total_cp_spent + $2,
-           chaos_cards_received = chaos_cards_received + $3,
-           updated_at = NOW()
-       WHERE id = $4`,
-      [isWinner ? 1 : 0, cpSpent, player.chaosCardsReceived, player.userId],
-    );
-  }
 }

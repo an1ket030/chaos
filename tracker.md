@@ -9,22 +9,22 @@
 
 | Phase | Description | Status | Completion |
 |---|---|---|---|
-| **Phase 1** | Core Product & Brand Revamp | 🟡 In Progress | **78%** |
+| **Phase 1** | Core Product & Brand Revamp | 🟢 **Completed** | **100%** |
 | **Phase 2** | Premium V1 & Solo/Progression | ⚪ Planned | **0%** |
 | **Phase 3** | Growth, Social & Competitive | ⚪ Planned | **0%** |
 | **Phase 4** | Monetization & Economy | ⚪ Planned | **0%** |
 | **Phase 5** | Platform, Ecosystem & Expansion | ⚪ Planned | **0%** |
 
 ```
-PHASE 1 PROGRESS: [=======================-------] 78% (14/18 Core Modules)
-OVERALL ROADMAP:  [=====-------------------------] 16% (14/86 Total Milestones)
+PHASE 1 PROGRESS: [================================] 100% (18/18 Core Modules)
+OVERALL ROADMAP:  [======--------------------------] 21% (18/86 Total Milestones)
 ```
 
 ---
 
 ## 🏁 Phase 1: Core Product & Brand Revamp
 
-### Status: 🟡 In Progress (78% Complete)
+### Status: 🟢 Completed (100% Complete)
 *Goal: Transform the prototype into an independent, production-grade, commercial application.*
 
 #### 1.1 Brand Identity & Design System
@@ -42,7 +42,7 @@ OVERALL ROADMAP:  [=====-------------------------] 16% (14/86 Total Milestones)
   - `--dw-chaos` (`#9B5DE5`), `--dw-danger` (`#FF3B3B`), `--dw-success` (`#2ECC71`).
   - Custom scrollbars, glow utilities, and keyframe animations.
 - [x] **Environment Configuration** (`apps/client/src/hooks/useSocket.ts`, `tsconfig.json`)
-  - Eliminated hardcoded `localhost:3001` endpoints; configured `import.meta.env.VITE_SERVER_URL`.
+  - Eliminated hardcoded `localhost:3001` endpoints; configured dynamic `import.meta.env.VITE_SERVER_URL`.
   - Added `"vite/client"` to TypeScript compiler configuration.
 
 #### 1.2 Authentication & Gateway
@@ -50,21 +50,23 @@ OVERALL ROADMAP:  [=====-------------------------] 16% (14/86 Total Milestones)
   - DraftWar tactical theme, split layout, Google OAuth button, and form feedback.
 - [x] **Branded Register Page** (`apps/client/src/pages/auth/RegisterPage.tsx`)
   - Password strength, matching validation, and War Room aesthetic.
-- [ ] **Auth Token Refresh Interceptor** (`apps/client/src/lib/api.ts`)
-  - *Status:* Pending — need automated 401 token refresh loop with cookie/localStorage sync.
+- [x] **Auth Token Refresh Interceptor** (`apps/client/src/lib/api.ts`)
+  - Request queueing mechanism during token refresh to avoid race conditions.
+  - Automatic token rotation (`/auth/refresh`) and graceful logout on failure.
 
 #### 1.3 Lobby & Room Discovery
 - [x] **Lobby Command Center Overhaul** (`apps/client/src/pages/lobby/LobbyPage.tsx`)
   - DraftWar navigation bar with live ELO pill, profile avatar, and status badges.
   - Public Room Browser tab displaying live joinable matches.
   - Direct 6-character room code join box.
+  - Tactical Briefing onboarding launch button in header.
 - [x] **Custom Room Creation Modal** (`apps/client/src/pages/lobby/LobbyPage.tsx`)
   - Visual Edition Picker: World Cup, Champions League, Premier League, La Liga, Bundesliga, Legends.
   - Match settings controls: Starting budget slider (80–200 CP), Manager count (2–4), Timer (8s, 10s, 15s).
   - Disruption engine toggles: Chaos cards on/off, Finance cards on/off.
   - Public vs Private visibility toggle.
 - [x] **Backend Public Rooms Discovery** (`apps/server/src/routes/lobby.router.ts`, `room.service.ts`)
-  - `GET /lobby/rooms` endpoint implemented to scan active Redis rooms and return public listings.
+  - `GET /lobby/rooms` endpoint scanning active Redis rooms and returning sanitized public previews.
 
 #### 1.4 Waiting Room
 - [x] **Waiting Room Overhaul** (`apps/client/src/pages/waiting/WaitingRoomPage.tsx`)
@@ -100,17 +102,26 @@ OVERALL ROADMAP:  [=====-------------------------] 16% (14/86 Total Milestones)
 - [x] **Backend Match Results API** (`apps/server/src/routes/room.router.ts`, `room.service.ts`)
   - `GET /rooms/:code/results` endpoint calculating final standings, squad OVRs, and awards from Redis room state.
 
-#### 1.8 Remaining Phase 1 Deliverables
-- [ ] **PostgreSQL Match Persistence** (`apps/server/src/modules/match/`)
-  - Persist every completed match to database (match ID, squads, awards, scores, participants).
-- [ ] **ELO Rating Engine** (`apps/server/src/modules/elo/`)
-  - Calculate official ELO deltas based on opponent ratings and placement.
-- [ ] **Profile Page Revamp** (`apps/client/src/pages/profile/ProfilePage.tsx`)
-  - Display lifetime win/loss record, ELO history chart, and match history list.
-- [ ] **Centralized Socket Provider** (`apps/client/src/context/SocketContext.tsx`)
-  - Singleton socket connection with automatic reconnect and state restoration.
-- [ ] **Interactive Onboarding Modal** (`apps/client/src/components/onboarding/`)
-  - 3-step visual swipe guide explaining Bidding, Chaos Cards, and Match Simulation.
+#### 1.8 Database, Progression & Architecture
+- [x] **PostgreSQL Match Persistence** (`apps/server/src/modules/match/match.service.ts`)
+  - Fully persists every completed tournament to PostgreSQL `games` and `game_participants` tables.
+  - Saves room code, edition, settings, full results, awards, participant placements, OVRs, formations, and CP spent.
+- [x] **Multiplayer ELO Rating Engine** (`apps/server/src/modules/elo/elo.service.ts`)
+  - Pairwise logistic ELO algorithm scaled for multiplayer tournaments.
+  - Computes rating adjustments and tier titles (Bronze, Silver, Gold, Platinum, Diamond, Elite).
+  - Automatically updates users' lifetime ELO and stats upon tournament completion.
+- [x] **Revamped Profile Page** (`apps/client/src/pages/profile/ProfilePage.tsx`)
+  - Full Tactical Dossier view featuring:
+    - Manager Avatar with ELO tier frame, commissioning date, and tactics.
+    - 6 Core KPIs: Tournaments Won, Total Matches, Win Rate %, Best Squad OVR, Average Spend/Match, Chaos Survived.
+    - Interactive Tabs: Match History list with ranks and ELO impact deltas ($\pm\Delta$), Career Achievements unlock showcase, and Combat/Financial intelligence breakdown.
+- [x] **Centralized Socket Provider** (`apps/client/src/context/SocketContext.tsx`, `useSocket.ts`)
+  - React Context provider with singleton socket lifecycle, connection state reactivity, and auto-reconnect.
+  - Wrapped around the entire app in `App.tsx`.
+- [x] **Interactive Onboarding Modal** (`apps/client/src/components/onboarding/OnboardingModal.tsx`)
+  - 3-step visual swipe guide explaining Bidding Pressure, Chaos Disruption Cards, and 2D Pitch Simulation.
+  - Automatically launches for new managers (stored in `localStorage['draftwar_onboarding_seen']`).
+  - Accessible on-demand via the "Briefing" button in the Hub header.
 
 ---
 
@@ -181,13 +192,3 @@ OVERALL ROADMAP:  [=====-------------------------] 16% (14/86 Total Milestones)
 | **Live Matchday Real-World Data Sync** | `apps/server/src/jobs/playerSync.ts` | ⚪ Planned | 🟡 Medium |
 | **Club/Clan Wars Guild System** | `apps/server/src/modules/club/` | ⚪ Planned | 🟡 Medium |
 | **Public Developer REST / GraphQL API** | `apps/server/src/api/v1/` | ⚪ Planned | 🟡 Low |
-
----
-
-## 🎯 Immediate Next Sprints (Phase 1 Finalization)
-
-1. **Sprint 1.1:** Build PostgreSQL Match Persistence schema and service (`MatchRecord` repository).
-2. **Sprint 1.2:** Implement formal ELO calculation module with K-factor rating updates.
-3. **Sprint 1.3:** Complete the `ProfilePage.tsx` with lifetime match history and squad showcase.
-4. **Sprint 1.4:** Centralize Socket.IO connection in React `SocketContext` with reconnection logic.
-5. **Sprint 1.5:** Implement 3-screen Onboarding modal for new accounts.
