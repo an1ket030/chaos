@@ -223,7 +223,12 @@ export function AuctionRoomPage() {
       });
     });
 
-    return () => { socket.emit('room:leave'); socket.disconnect(); };
+    return () => {
+      socket.off('connect');
+      socket.off('room:state');
+      socket.off('room:system_msg');
+      socket.off('auction:bid_update');
+    };
   }, [code, user]);
 
   useEffect(() => {

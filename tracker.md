@@ -99,6 +99,15 @@ OVERALL ROADMAP:  [======--------------------------] 21% (18/86 Total Milestones
   - Post-match awards showcase: Best Value Pick, Biggest Robbery, Overpaid Manager, Chaos Magnet, Clean Sheet, Attack of the Match.
   - Result card share modal with exportable match summary.
   - Instant rematch and hub navigation flows.
+- [x] **Match Simulation Transition & Squad Builder Flow Fix** (`SquadBuilderPage.tsx`, `SimulationPage.tsx`, `socket.gateway.ts`)
+  - Resolved hanging spinner state on squad confirmation across multiplayer clients.
+  - Replaced ad-hoc raw socket connections with unified singleton socket lifecycle (`useSocket()`).
+  - Removed destructive `socket.disconnect()` calls on page unmount during internal room navigation.
+  - Added Redis persistence for finalized squads (`squads:{code}`) to survive reloads and reconnects.
+  - Added multi-event navigation triggers (`squad:all_ready`, `room:state`, `simulation:start`, and fallback REST poll).
+  - Built active simulation event cache on server with `simulation:sync` for seamless re-sync.
+  - Transitioned room status to `RESULTS` in Redis upon match simulation conclusion.
+  - Fully redesigned `SquadBuilderPage.tsx` and `Button.tsx` to match the DraftWar brand tokens (`--dw-void`, `--dw-surface`, `--dw-fire`, `--dw-gold`).
 - [x] **Backend Match Results API** (`apps/server/src/routes/room.router.ts`, `room.service.ts`)
   - `GET /rooms/:code/results` endpoint calculating final standings, squad OVRs, and awards from Redis room state.
 

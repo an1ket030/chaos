@@ -92,7 +92,10 @@ export interface ClientToServerEvents {
   'auction:skip': (callback: (result: { success: boolean; error?: string }) => void) => void;
 
   // Squad builder
-  'squad:finalize': (data: FinalizedSquad, callback: (result: { success: boolean; error?: string }) => void) => void;
+  'squad:finalize': (data: FinalizedSquad, callback: (result: { success: boolean; allReady?: boolean; error?: string }) => void) => void;
+
+  // Match simulation
+  'simulation:sync': () => void;
 }
 
 // ============================================================

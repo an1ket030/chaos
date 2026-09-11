@@ -1,10 +1,13 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useRoomStore } from '../../store/roomStore';
 import { useAuthStore } from '../../store/authStore';
-import { io } from 'socket.io-client';
+import { useSocket } from '../../hooks/useSocket';
+import { api } from '../../lib/api';
 import { Button } from '../../components/ui/Button';
-// Inline to avoid Vite/Rollup resolution issue with @chaos/shared
+
+// Inline to avoid Vite/Rollup resolution issues with @chaos/shared
 function calculateChemistry(
   players: Array<{ nationality: string; club: string; position: string; naturalPosition: string }>
 ): number {
@@ -19,30 +22,53 @@ function calculateChemistry(
   return Math.min(Math.max(chemistry, 0), 100);
 }
 
-// Hardcoded to bypass Vite caching/export issues
 const ALL_FORMATIONS = ['4-3-3', '4-4-2', '4-2-3-1', '3-5-2', '5-3-2', '4-1-4-1', '3-4-3'] as const;
 type Formation = typeof ALL_FORMATIONS[number];
+
 const FORMATION_LAYOUTS: Record<Formation, any[]> = {
   '4-3-3': [
-    { position: 'GK', x: 50, y: 8 }, { position: 'LB', x: 15, y: 28 }, { position: 'CB', x: 35, y: 25 }, { position: 'CB', x: 65, y: 25 }, { position: 'RB', x: 85, y: 28 }, { position: 'CM', x: 25, y: 52 }, { position: 'CM', x: 50, y: 48 }, { position: 'CM', x: 75, y: 52 }, { position: 'LW', x: 18, y: 75 }, { position: 'ST', x: 50, y: 82 }, { position: 'RW', x: 82, y: 75 }
+    { position: 'GK', x: 50, y: 10 },
+    { position: 'LB', x: 16, y: 28 }, { position: 'CB', x: 38, y: 25 }, { position: 'CB', x: 62, y: 25 }, { position: 'RB', x: 84, y: 28 },
+    { position: 'CM', x: 26, y: 52 }, { position: 'CM', x: 50, y: 48 }, { position: 'CM', x: 74, y: 52 },
+    { position: 'LW', x: 20, y: 76 }, { position: 'ST', x: 50, y: 84 }, { position: 'RW', x: 80, y: 76 }
   ],
   '4-4-2': [
-    { position: 'GK', x: 50, y: 8 }, { position: 'LB', x: 15, y: 28 }, { position: 'CB', x: 35, y: 25 }, { position: 'CB', x: 65, y: 25 }, { position: 'RB', x: 85, y: 28 }, { position: 'LW', x: 15, y: 52 }, { position: 'CM', x: 38, y: 50 }, { position: 'CM', x: 62, y: 50 }, { position: 'RW', x: 85, y: 52 }, { position: 'ST', x: 35, y: 80 }, { position: 'ST', x: 65, y: 80 }
+    { position: 'GK', x: 50, y: 10 },
+    { position: 'LB', x: 16, y: 28 }, { position: 'CB', x: 38, y: 25 }, { position: 'CB', x: 62, y: 25 }, { position: 'RB', x: 84, y: 28 },
+    { position: 'LM', x: 16, y: 54 }, { position: 'CM', x: 38, y: 50 }, { position: 'CM', x: 62, y: 50 }, { position: 'RM', x: 84, y: 54 },
+    { position: 'ST', x: 36, y: 82 }, { position: 'ST', x: 64, y: 82 }
   ],
   '4-2-3-1': [
-    { position: 'GK', x: 50, y: 8 }, { position: 'LB', x: 15, y: 28 }, { position: 'CB', x: 35, y: 25 }, { position: 'CB', x: 65, y: 25 }, { position: 'RB', x: 85, y: 28 }, { position: 'CDM', x: 35, y: 47 }, { position: 'CDM', x: 65, y: 47 }, { position: 'LW', x: 18, y: 67 }, { position: 'CAM', x: 50, y: 65 }, { position: 'RW', x: 82, y: 67 }, { position: 'ST', x: 50, y: 85 }
+    { position: 'GK', x: 50, y: 10 },
+    { position: 'LB', x: 16, y: 28 }, { position: 'CB', x: 38, y: 25 }, { position: 'CB', x: 62, y: 25 }, { position: 'RB', x: 84, y: 28 },
+    { position: 'CDM', x: 35, y: 46 }, { position: 'CDM', x: 65, y: 46 },
+    { position: 'LW', x: 18, y: 68 }, { position: 'CAM', x: 50, y: 66 }, { position: 'RW', x: 82, y: 68 },
+    { position: 'ST', x: 50, y: 86 }
   ],
   '3-5-2': [
-    { position: 'GK', x: 50, y: 8 }, { position: 'CB', x: 25, y: 25 }, { position: 'CB', x: 50, y: 22 }, { position: 'CB', x: 75, y: 25 }, { position: 'LB', x: 10, y: 50 }, { position: 'CDM', x: 30, y: 48 }, { position: 'CM', x: 50, y: 47 }, { position: 'CDM', x: 70, y: 48 }, { position: 'RB', x: 90, y: 50 }, { position: 'ST', x: 35, y: 80 }, { position: 'ST', x: 65, y: 80 }
+    { position: 'GK', x: 50, y: 10 },
+    { position: 'CB', x: 25, y: 26 }, { position: 'CB', x: 50, y: 23 }, { position: 'CB', x: 75, y: 26 },
+    { position: 'LM', x: 12, y: 52 }, { position: 'CDM', x: 35, y: 48 }, { position: 'CAM', x: 50, y: 62 }, { position: 'CDM', x: 65, y: 48 }, { position: 'RM', x: 88, y: 52 },
+    { position: 'ST', x: 36, y: 82 }, { position: 'ST', x: 64, y: 82 }
   ],
   '5-3-2': [
-    { position: 'GK', x: 50, y: 8 }, { position: 'LB', x: 10, y: 28 }, { position: 'CB', x: 27, y: 25 }, { position: 'CB', x: 50, y: 22 }, { position: 'CB', x: 73, y: 25 }, { position: 'RB', x: 90, y: 28 }, { position: 'CM', x: 25, y: 55 }, { position: 'CM', x: 50, y: 52 }, { position: 'CM', x: 75, y: 55 }, { position: 'ST', x: 35, y: 80 }, { position: 'ST', x: 65, y: 80 }
+    { position: 'GK', x: 50, y: 10 },
+    { position: 'LWB', x: 12, y: 32 }, { position: 'CB', x: 30, y: 25 }, { position: 'CB', x: 50, y: 22 }, { position: 'CB', x: 70, y: 25 }, { position: 'RWB', x: 88, y: 32 },
+    { position: 'CM', x: 26, y: 55 }, { position: 'CM', x: 50, y: 50 }, { position: 'CM', x: 74, y: 55 },
+    { position: 'ST', x: 36, y: 82 }, { position: 'ST', x: 64, y: 82 }
   ],
   '4-1-4-1': [
-    { position: 'GK', x: 50, y: 8 }, { position: 'LB', x: 15, y: 28 }, { position: 'CB', x: 35, y: 25 }, { position: 'CB', x: 65, y: 25 }, { position: 'RB', x: 85, y: 28 }, { position: 'CDM', x: 50, y: 45 }, { position: 'LW', x: 12, y: 62 }, { position: 'CM', x: 35, y: 60 }, { position: 'CM', x: 65, y: 60 }, { position: 'RW', x: 88, y: 62 }, { position: 'ST', x: 50, y: 83 }
+    { position: 'GK', x: 50, y: 10 },
+    { position: 'LB', x: 16, y: 28 }, { position: 'CB', x: 38, y: 25 }, { position: 'CB', x: 62, y: 25 }, { position: 'RB', x: 84, y: 28 },
+    { position: 'CDM', x: 50, y: 44 },
+    { position: 'LM', x: 16, y: 62 }, { position: 'CM', x: 38, y: 60 }, { position: 'CM', x: 62, y: 60 }, { position: 'RM', x: 84, y: 62 },
+    { position: 'ST', x: 50, y: 84 }
   ],
   '3-4-3': [
-    { position: 'GK', x: 50, y: 8 }, { position: 'CB', x: 25, y: 25 }, { position: 'CB', x: 50, y: 22 }, { position: 'CB', x: 75, y: 25 }, { position: 'LB', x: 15, y: 50 }, { position: 'CM', x: 35, y: 48 }, { position: 'CM', x: 65, y: 48 }, { position: 'RB', x: 85, y: 50 }, { position: 'LW', x: 18, y: 75 }, { position: 'ST', x: 50, y: 80 }, { position: 'RW', x: 82, y: 75 }
+    { position: 'GK', x: 50, y: 10 },
+    { position: 'CB', x: 25, y: 26 }, { position: 'CB', x: 50, y: 23 }, { position: 'CB', x: 75, y: 26 },
+    { position: 'LM', x: 16, y: 52 }, { position: 'CM', x: 38, y: 50 }, { position: 'CM', x: 62, y: 50 }, { position: 'RM', x: 84, y: 52 },
+    { position: 'LW', x: 18, y: 78 }, { position: 'ST', x: 50, y: 84 }, { position: 'RW', x: 82, y: 78 }
   ],
 };
 
@@ -51,8 +77,8 @@ export function SquadBuilderPage() {
   const navigate = useNavigate();
   const { room, setRoom } = useRoomStore();
   const { user } = useAuthStore();
-  const socketRef = useRef<any>(null);
-  
+  const socket = useSocket();
+
   const [formation, setFormation] = useState<Formation>('4-3-3');
   const [lineup, setLineup] = useState<Record<number, string>>({}); // slotIndex -> playerId
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
@@ -60,37 +86,130 @@ export function SquadBuilderPage() {
   const [viceCaptain, setViceCaptain] = useState<string>('');
   const [isReady, setIsReady] = useState(false);
 
-  // Own socket — must rejoin room so squad:finalize works server-side
+  // Initial load: fetch room state from REST and check status
+  useEffect(() => {
+    if (!code) return;
+    const upperCode = code.toUpperCase();
+
+    api.get(`/rooms/${upperCode}`)
+      .then(({ data }) => {
+        if (data) {
+          setRoom(data);
+          if (data.status === 'SIMULATION') {
+            navigate(`/room/${upperCode}/simulation`);
+          } else if (data.status === 'RESULTS') {
+            navigate(`/room/${upperCode}/results`);
+          }
+        }
+      })
+      .catch((err) => console.warn('Squad builder initial room fetch warning:', err));
+  }, [code, navigate, setRoom]);
+
+  // Socket setup with unified lifecycle and navigation listeners
   useEffect(() => {
     if (!code || !user) return;
+    const upperCode = code.toUpperCase();
     const token = localStorage.getItem('accessToken') || '';
-    const socket = io('http://localhost:3001', { auth: { token } });
-    socketRef.current = socket;
 
-    socket.on('connect', () => {
-      socket.emit('room:join', { code, token }, (res: any) => {
-        if (!res.success) console.error('Squad builder join failed:', res.error);
-      });
-    });
-
-    socket.on('room:state', (state: any) => {
-      setRoom(state);
-      if (state.status === 'SIMULATION') {
-        navigate(`/room/${code}/simulation`);
+    // Join room channel
+    socket.emit('room:join', { code: upperCode, token }, (res: any) => {
+      if (res?.room) {
+        setRoom(res.room);
+        if (res.room.status === 'SIMULATION') {
+          navigate(`/room/${upperCode}/simulation`);
+        } else if (res.room.status === 'RESULTS') {
+          navigate(`/room/${upperCode}/results`);
+        }
       }
     });
 
-    return () => {
-      socket.emit('room:leave');
-      socket.disconnect();
+    const onRoomState = (state: any) => {
+      if (!state) return;
+      setRoom(state);
+      if (state.status === 'SIMULATION') {
+        navigate(`/room/${upperCode}/simulation`);
+      } else if (state.status === 'RESULTS') {
+        navigate(`/room/${upperCode}/results`);
+      }
     };
-  }, [code, user]);
+
+    const onSquadAllReady = () => {
+      navigate(`/room/${upperCode}/simulation`);
+    };
+
+    const onSimulationStart = () => {
+      navigate(`/room/${upperCode}/simulation`);
+    };
+
+    socket.on('room:state', onRoomState);
+    socket.on('squad:all_ready', onSquadAllReady);
+    socket.on('simulation:start', onSimulationStart);
+
+    return () => {
+      socket.off('room:state', onRoomState);
+      socket.off('squad:all_ready', onSquadAllReady);
+      socket.off('simulation:start', onSimulationStart);
+    };
+  }, [code, user, socket, navigate, setRoom]);
+
+  // Polling fallback while waiting for other players
+  useEffect(() => {
+    if (!isReady || !code) return;
+    const upperCode = code.toUpperCase();
+
+    const interval = setInterval(async () => {
+      try {
+        const { data } = await api.get(`/rooms/${upperCode}`);
+        if (data?.status === 'SIMULATION') {
+          clearInterval(interval);
+          navigate(`/room/${upperCode}/simulation`);
+        } else if (data?.status === 'RESULTS') {
+          clearInterval(interval);
+          navigate(`/room/${upperCode}/results`);
+        }
+      } catch {}
+    }, 1200);
+
+    return () => clearInterval(interval);
+  }, [isReady, code, navigate]);
 
   const me = room?.players.find((p) => p.userId === user?.id);
   const acquiredPlayers = useMemo(() => {
     if (!me) return [];
     return me.squad.filter((s) => s.player !== null).map((s) => s.player!);
   }, [me]);
+
+  // Auto-populate lineup with acquired players matching formation
+  useEffect(() => {
+    if (acquiredPlayers.length === 0 || Object.keys(lineup).length > 0) return;
+    const layout = FORMATION_LAYOUTS[formation];
+    const initialLineup: Record<number, string> = {};
+    const unassigned = [...acquiredPlayers];
+
+    // Priority 1: Exact position matches
+    layout.forEach((slot, idx) => {
+      const matchIdx = unassigned.findIndex(p => p.position === slot.position);
+      if (matchIdx !== -1) {
+        initialLineup[idx] = unassigned[matchIdx].id;
+        unassigned.splice(matchIdx, 1);
+      }
+    });
+
+    // Priority 2: Fill remaining empty slots with any available player
+    layout.forEach((_, idx) => {
+      if (!initialLineup[idx] && unassigned.length > 0) {
+        initialLineup[idx] = unassigned.shift()!.id;
+      }
+    });
+
+    setLineup(initialLineup);
+    const firstPlayerId = Object.values(initialLineup)[0];
+    if (firstPlayerId) {
+      setCaptain(firstPlayerId);
+      const secondPlayerId = Object.values(initialLineup)[1] || firstPlayerId;
+      setViceCaptain(secondPlayerId);
+    }
+  }, [acquiredPlayers, formation]);
 
   const layout = FORMATION_LAYOUTS[formation];
 
@@ -120,12 +239,12 @@ export function SquadBuilderPage() {
   }, [lineup, acquiredPlayers, layout]);
 
   const handleSlotClick = (idx: number) => {
-    setSelectedSlot(idx);
+    setSelectedSlot(selectedSlot === idx ? null : idx);
   };
 
   const handlePlayerSelect = (playerId: string) => {
     if (selectedSlot === null) return;
-    
+
     // Check if player is already in another slot
     const newLineup = { ...lineup };
     for (const [sIdx, pId] of Object.entries(newLineup)) {
@@ -133,7 +252,7 @@ export function SquadBuilderPage() {
         delete newLineup[parseInt(sIdx, 10)];
       }
     }
-    
+
     newLineup[selectedSlot] = playerId;
     setLineup(newLineup);
     setSelectedSlot(null);
@@ -155,11 +274,11 @@ export function SquadBuilderPage() {
 
   const handleReady = () => {
     if (Object.keys(lineup).length < 11) {
-      alert("Please fill all 11 positions!");
+      alert("Please place all 11 players in your Starting XI!");
       return;
     }
     setIsReady(true);
-    
+
     const formattedLineup = Object.entries(lineup).map(([slotIdxStr, playerId]) => {
       const slotIdx = parseInt(slotIdxStr, 10);
       return {
@@ -169,18 +288,25 @@ export function SquadBuilderPage() {
       };
     });
 
-    socketRef.current?.emit('squad:finalize', {
+    const payload = {
       userId: user?.id || 'mock',
+      roomCode: code?.toUpperCase(),
       formation,
       lineup: formattedLineup,
       captain: captain || formattedLineup[0].playerId,
       viceCaptain: viceCaptain || formattedLineup[0].playerId,
       overallRating,
-      chemistry
-    }, (res: any) => {
-      if (!res.success) {
+      chemistry,
+    };
+
+    socket.emit('squad:finalize', payload as any, (res: any) => {
+      if (res?.success) {
+        if (res.allReady) {
+          navigate(`/room/${code?.toUpperCase()}/simulation`);
+        }
+      } else {
         setIsReady(false);
-        alert(res.error || "Failed to submit squad");
+        alert(res?.error || 'Failed to submit squad');
       }
     });
   };
@@ -188,127 +314,315 @@ export function SquadBuilderPage() {
   const unassignedPlayers = acquiredPlayers.filter(p => !Object.values(lineup).includes(p.id));
 
   return (
-    <div className="min-h-screen p-6 md:p-8 flex gap-8 h-screen" style={{ background: '#0d0d0d', color: '#fff' }}>
-      
-      {/* LEFT: Squad & Pitch */}
-      <div className="flex-1 flex flex-col h-full bg-[#141414] rounded-3xl border border-white/10 p-6 relative overflow-hidden">
-        <div className="flex justify-between items-center mb-6 relative z-10">
-          <div>
-            <h1 className="text-3xl font-black uppercase tracking-wider" style={{ color: '#C8FF00' }}>Starting XI</h1>
-            <p className="text-gray-400 text-sm">Drag or select to place players</p>
-          </div>
-          <div className="flex gap-6 text-right">
-            <div>
-              <div className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Formation</div>
-              <select 
-                value={formation} 
-                onChange={e => { setFormation(e.target.value as any); setLineup({}); setCaptain(''); setViceCaptain(''); }}
-                className="bg-black/50 border border-white/20 rounded-md px-3 py-1 text-white font-bold outline-none"
-              >
-                {ALL_FORMATIONS.map(f => <option key={f} value={f}>{f}</option>)}
-              </select>
-            </div>
-            <div>
-              <div className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">OVR</div>
-              <div className="text-2xl font-black text-white">{overallRating}</div>
-            </div>
-            <div>
-              <div className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">CHEM</div>
-              <div className="text-2xl font-black" style={{ color: chemistry >= 80 ? '#C8FF00' : chemistry >= 50 ? '#FFD700' : '#FF4444' }}>{chemistry}</div>
-            </div>
-          </div>
+    <div className="min-h-screen bg-[#080C12] text-[#F0F4FF] flex flex-col h-screen overflow-hidden">
+      {/* Top Navigation Bar */}
+      <header className="h-16 border-b border-white/[0.07] bg-[#0F1520] px-6 flex items-center justify-between shrink-0 z-30">
+        <div className="flex items-center gap-4">
+          <span className="font-heading font-black text-2xl tracking-widest text-[#FF6B2B]">
+            DRAFTWAR
+          </span>
+          <span className="text-xs uppercase tracking-widest px-2.5 py-1 rounded bg-white/[0.06] border border-white/10 text-[#8A95A8]">
+            ROOM {code?.toUpperCase()}
+          </span>
         </div>
 
-        {/* Pitch Area */}
-        <div className="flex-1 relative rounded-xl border-2 border-white/10 overflow-hidden bg-green-900/20 mb-6">
-          <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 40px, rgba(255,255,255,0.1) 40px, rgba(255,255,255,0.1) 80px)' }}></div>
-          {layout.map((slot, idx) => {
-            const pid = lineup[idx];
-            const player = pid ? acquiredPlayers.find(p => p.id === pid) : null;
-            return (
-              <div 
-                key={idx}
-                onClick={() => handleSlotClick(idx)}
-                className={`absolute transform -translate-x-1/2 -translate-y-1/2 w-16 h-20 rounded-lg border-2 cursor-pointer transition-all hover:scale-110 flex flex-col items-center justify-center
-                  ${selectedSlot === idx ? 'border-[#C8FF00] shadow-[0_0_15px_rgba(200,255,0,0.5)] z-20' : player ? 'border-white/20 bg-black/80 z-10' : 'border-white/30 border-dashed bg-black/40 z-0'}
-                `}
-                style={{ left: `${slot.x}%`, top: `${slot.y}%` }}
-              >
-                {player ? (
-                  <>
-                    <div className="text-[9px] font-black absolute -top-2 px-1 rounded" style={{ background: '#C8FF00', color: '#000' }}>{slot.position}</div>
-                    <img src={player.imageUrl} alt="" className="w-8 h-8 rounded-full object-cover object-top mb-1" />
-                    <div className="text-[10px] font-bold text-white truncate w-full text-center px-1">{player.name.split(' ').pop()}</div>
-                    <div className="text-[8px] font-black" style={{ color: player.position === slot.position ? '#C8FF00' : '#FFD700' }}>{player.rating}</div>
-                    <button onClick={(e) => removePlayerFromSlot(idx, e)} className="absolute -top-2 -right-2 bg-red-500 w-4 h-4 rounded-full text-[10px] flex items-center justify-center">×</button>
-                  </>
-                ) : (
-                  <>
-                    <div className="text-white/50 text-xs font-black mb-1">{slot.position}</div>
-                    <div className="text-white/20 text-2xl">+</div>
-                  </>
-                )}
-              </div>
-            );
-          })}
-        </div>
-
-        <Button size="lg" className="w-full" onClick={handleReady} isLoading={isReady} disabled={isReady}>
-          {isReady ? 'Waiting for others...' : 'Confirm Squad'}
-        </Button>
-      </div>
-
-      {/* RIGHT: Player Bench */}
-      <div className="w-80 h-full bg-[#141414] rounded-3xl border border-white/10 p-6 flex flex-col overflow-hidden shrink-0">
-        <h2 className="text-lg font-black uppercase tracking-widest text-gray-400 mb-4">Bench</h2>
-        
-        {selectedSlot !== null && (
-          <div className="mb-4 p-3 rounded-xl border border-[#C8FF00]/50" style={{ background: 'rgba(200,255,0,0.1)' }}>
-            <div className="text-xs font-bold" style={{ color: '#C8FF00' }}>Selecting for: {layout[selectedSlot].position}</div>
-            <div className="text-[10px] text-gray-400">Click a player below to assign</div>
-          </div>
-        )}
-
-        <div className="flex-1 overflow-y-auto space-y-2 pr-2" style={{ scrollbarWidth: 'none' }}>
-          {unassignedPlayers.map(p => (
-            <div 
-              key={p.id}
-              onClick={() => selectedSlot !== null ? handlePlayerSelect(p.id) : null}
-              className={`p-3 rounded-xl border flex items-center gap-3 transition-colors ${selectedSlot !== null ? 'cursor-pointer hover:border-[#C8FF00] hover:bg-white/5' : 'opacity-50 cursor-not-allowed'}`}
-              style={{ borderColor: 'rgba(255,255,255,0.1)', background: '#0d0d0d' }}
+        {/* Formation & Team Metrics */}
+        <div className="flex items-center gap-6">
+          <div className="flex items-center gap-2 bg-[#161E2E] border border-white/10 px-3 py-1.5 rounded-lg">
+            <span className="text-[10px] font-heading font-bold text-[#8A95A8] uppercase tracking-wider">Formation</span>
+            <select
+              value={formation}
+              onChange={e => {
+                setFormation(e.target.value as any);
+                setLineup({});
+                setCaptain('');
+                setViceCaptain('');
+              }}
+              className="bg-transparent text-sm font-bold text-white outline-none cursor-pointer"
             >
-              <img src={p.imageUrl} alt="" className="w-10 h-10 rounded-full object-cover object-top" />
-              <div className="flex-1 min-w-0">
-                <div className="font-bold text-sm text-white truncate">{p.name}</div>
-                <div className="text-[10px] text-gray-500 font-bold uppercase">{p.position} · {p.club}</div>
-              </div>
-              <div className="font-black text-lg" style={{ color: '#C8FF00' }}>{p.rating}</div>
-            </div>
-          ))}
-          {unassignedPlayers.length === 0 && (
-            <div className="text-center text-gray-500 text-sm mt-10">All players assigned!</div>
-          )}
-        </div>
-
-        {/* Roles */}
-        <div className="mt-4 pt-4 border-t border-white/10">
-          <div className="mb-3">
-            <div className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-1">Captain</div>
-            <select 
-              value={captain} 
-              onChange={e => setCaptain(e.target.value)}
-              className="w-full bg-black/50 border border-white/20 rounded-md px-3 py-2 text-white font-bold outline-none text-sm"
-            >
-              <option value="" disabled>Select Captain</option>
-              {Object.values(lineup).map(pid => {
-                const p = acquiredPlayers.find(pl => pl.id === pid);
-                return p ? <option key={pid} value={pid}>{p.name}</option> : null;
-              })}
+              {ALL_FORMATIONS.map(f => <option key={f} value={f} className="bg-[#161E2E] text-white">{f}</option>)}
             </select>
           </div>
+
+          <div className="flex items-center gap-4 bg-[#161E2E] border border-white/10 px-4 py-1.5 rounded-lg">
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-[10px] font-heading font-bold text-[#8A95A8] uppercase tracking-widest">OVR</span>
+              <span className="font-num font-black text-xl text-[#FF6B2B]">{overallRating}</span>
+            </div>
+            <div className="w-[1px] h-4 bg-white/10" />
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-[10px] font-heading font-bold text-[#8A95A8] uppercase tracking-widest">CHEM</span>
+              <span
+                className="font-num font-black text-xl"
+                style={{ color: chemistry >= 75 ? '#2ECC71' : chemistry >= 50 ? '#E8B84B' : '#FF3B3B' }}
+              >
+                {chemistry}
+              </span>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Squad Workspace */}
+      <div className="flex-1 flex gap-6 p-6 overflow-hidden">
+        {/* Pitch Area */}
+        <div className="flex-1 flex flex-col bg-[#0F1520] rounded-2xl border border-white/[0.07] p-4 relative overflow-hidden shadow-2xl">
+          <div className="flex items-center justify-between mb-3 px-2">
+            <div>
+              <h2 className="font-heading font-black text-2xl tracking-wide text-white uppercase">Starting XI</h2>
+              <p className="text-xs text-[#8A95A8]">Click a slot on the pitch then choose a player from your bench</p>
+            </div>
+            <div className="text-right text-xs text-[#8A95A8]">
+              <span className="font-bold text-white">{Object.keys(lineup).length}</span> / 11 Players Placed
+            </div>
+          </div>
+
+          {/* Football Pitch Container */}
+          <div className="flex-1 relative rounded-xl border border-white/10 overflow-hidden pitch-surface shadow-inner">
+            {/* Pitch Markings */}
+            <div className="absolute inset-x-0 top-1/2 h-[1px] bg-white/20 -translate-y-1/2" />
+            <div className="absolute left-1/2 top-1/2 w-28 h-28 border border-white/20 rounded-full -translate-x-1/2 -translate-y-1/2" />
+            <div className="absolute left-1/2 top-1/2 w-2 h-2 bg-white/40 rounded-full -translate-x-1/2 -translate-y-1/2" />
+
+            {/* Goal Areas */}
+            <div className="absolute left-1/2 top-0 w-44 h-16 border-b border-x border-white/20 -translate-x-1/2 rounded-b-md" />
+            <div className="absolute left-1/2 bottom-0 w-44 h-16 border-t border-x border-white/20 -translate-x-1/2 rounded-t-md" />
+
+            {/* Subtle Pitch Striping Overlay */}
+            <div
+              className="absolute inset-0 pointer-events-none opacity-25"
+              style={{
+                backgroundImage: 'repeating-linear-gradient(180deg, transparent, transparent 36px, rgba(255,255,255,0.05) 36px, rgba(255,255,255,0.05) 72px)'
+              }}
+            />
+
+            {/* Position Slots */}
+            {layout.map((slot, idx) => {
+              const pid = lineup[idx];
+              const player = pid ? acquiredPlayers.find(p => p.id === pid) : null;
+              const isSelected = selectedSlot === idx;
+              const isCap = captain === pid;
+              const isVc = viceCaptain === pid;
+
+              return (
+                <div
+                  key={idx}
+                  onClick={() => handleSlotClick(idx)}
+                  className={`absolute -translate-x-1/2 -translate-y-1/2 w-20 h-24 rounded-xl cursor-pointer transition-all duration-200 flex flex-col items-center justify-center select-none group
+                    ${isSelected
+                      ? 'border-2 border-[#FF6B2B] shadow-[0_0_25px_rgba(255,107,43,0.5)] scale-105 z-20 bg-[#161E2E]/95'
+                      : player
+                        ? 'border border-white/20 bg-[#0F1520]/90 hover:border-white/40 hover:scale-105 z-10'
+                        : 'border-2 border-dashed border-white/20 bg-black/40 hover:border-[#FF6B2B]/60 hover:bg-[#FF6B2B]/5 z-0'
+                    }
+                  `}
+                  style={{ left: `${slot.x}%`, top: `${slot.y}%` }}
+                >
+                  {player ? (
+                    <>
+                      {/* Role & Position Badges */}
+                      <div className="absolute -top-2 flex items-center gap-1 z-30">
+                        <span className="text-[9px] font-heading font-black px-1.5 py-0.5 rounded bg-[#FF6B2B] text-white shadow">
+                          {slot.position}
+                        </span>
+                        {isCap && (
+                          <span className="text-[9px] font-heading font-black px-1 py-0.5 rounded bg-[#E8B84B] text-black shadow">
+                            C
+                          </span>
+                        )}
+                        {isVc && !isCap && (
+                          <span className="text-[9px] font-heading font-black px-1 py-0.5 rounded bg-[#8A95A8] text-white shadow">
+                            VC
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Player Image */}
+                      <img
+                        src={player.imageUrl}
+                        alt={player.name}
+                        className="w-10 h-10 rounded-full object-cover object-top border border-white/20 shadow-md mb-1"
+                      />
+
+                      {/* Player Surname */}
+                      <div className="text-[11px] font-bold text-white truncate w-full text-center px-1 leading-tight">
+                        {player.name.split(' ').pop()}
+                      </div>
+
+                      {/* Rating */}
+                      <div
+                        className="font-num font-black text-[11px]"
+                        style={{ color: player.position === slot.position ? '#2ECC71' : '#E8B84B' }}
+                      >
+                        {player.rating}
+                      </div>
+
+                      {/* Remove Button */}
+                      <button
+                        onClick={(e) => removePlayerFromSlot(idx, e)}
+                        className="absolute -top-2 -right-2 bg-[#FF3B3B] hover:bg-red-600 text-white w-5 h-5 rounded-full text-xs font-bold flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow"
+                        title="Remove to bench"
+                      >
+                        ×
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-xs font-heading font-black text-white/60 tracking-wider">
+                        {slot.position}
+                      </span>
+                      <span className="text-xl text-white/30 font-light mt-0.5">+</span>
+                    </>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Confirm Button Bar */}
+          <div className="mt-4 pt-2 border-t border-white/[0.07]">
+            <Button
+              size="lg"
+              className="w-full h-14"
+              onClick={handleReady}
+              disabled={isReady || Object.keys(lineup).length < 11}
+            >
+              {isReady ? (
+                <div className="flex items-center justify-center gap-3">
+                  <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <span className="font-heading font-bold text-sm tracking-wider uppercase">
+                    SQUAD LOCKED · WAITING FOR OPPONENT...
+                  </span>
+                </div>
+              ) : (
+                <span className="font-heading font-black text-base tracking-widest uppercase">
+                  CONFIRM & LOCK SQUAD
+                </span>
+              )}
+            </Button>
+          </div>
+        </div>
+
+        {/* Right Sidebar: Bench & Roles */}
+        <div className="w-96 bg-[#0F1520] rounded-2xl border border-white/[0.07] p-5 flex flex-col overflow-hidden shrink-0 shadow-2xl">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-heading font-black text-lg tracking-widest text-[#FF6B2B] uppercase">
+              RESERVES & BENCH
+            </h3>
+            <span className="text-xs text-[#8A95A8]">
+              {unassignedPlayers.length} Available
+            </span>
+          </div>
+
+          {/* Slot Selection Prompt */}
+          <AnimatePresence>
+            {selectedSlot !== null && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="mb-3 p-3 rounded-xl bg-[#FF6B2B]/10 border border-[#FF6B2B]/40 flex items-center justify-between"
+              >
+                <div>
+                  <div className="text-xs font-heading font-black text-[#FF6B2B] uppercase tracking-wider">
+                    Selecting for: {layout[selectedSlot].position}
+                  </div>
+                  <div className="text-[11px] text-[#8A95A8]">Click any player below to assign</div>
+                </div>
+                <button
+                  onClick={() => setSelectedSlot(null)}
+                  className="text-xs text-[#8A95A8] hover:text-white underline"
+                >
+                  Cancel
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Bench Player List */}
+          <div className="flex-1 overflow-y-auto space-y-2 pr-1" style={{ scrollbarWidth: 'thin' }}>
+            {unassignedPlayers.map((p) => {
+              const isMatch = selectedSlot !== null && layout[selectedSlot]?.position === p.position;
+              return (
+                <div
+                  key={p.id}
+                  onClick={() => selectedSlot !== null ? handlePlayerSelect(p.id) : null}
+                  className={`p-3 rounded-xl border flex items-center gap-3 transition-all duration-150
+                    ${selectedSlot !== null
+                      ? isMatch
+                        ? 'border-[#2ECC71]/60 bg-[#2ECC71]/10 cursor-pointer hover:scale-[1.02]'
+                        : 'border-white/10 bg-[#161E2E] cursor-pointer hover:border-[#FF6B2B]/60 hover:bg-[#FF6B2B]/5'
+                      : 'border-white/[0.06] bg-[#161E2E] opacity-75'
+                    }
+                  `}
+                >
+                  <img
+                    src={p.imageUrl}
+                    alt={p.name}
+                    className="w-10 h-10 rounded-full object-cover object-top border border-white/20 shrink-0"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="font-bold text-sm text-white truncate">{p.name}</div>
+                    <div className="text-[11px] text-[#8A95A8] flex items-center gap-1.5 font-medium">
+                      <span className="text-[10px] font-heading font-black px-1 rounded bg-white/10 text-white">
+                        {p.position}
+                      </span>
+                      <span className="truncate">{p.club}</span>
+                    </div>
+                  </div>
+                  <div className="font-num font-black text-lg text-[#E8B84B] shrink-0">
+                    {p.rating}
+                  </div>
+                </div>
+              );
+            })}
+
+            {unassignedPlayers.length === 0 && (
+              <div className="text-center text-[#8A95A8] text-sm py-12 flex flex-col items-center gap-2">
+                <span className="text-2xl">⭐</span>
+                <span>All acquired players placed in Starting XI!</span>
+              </div>
+            )}
+          </div>
+
+          {/* Captaincy Selection */}
+          <div className="mt-4 pt-4 border-t border-white/[0.07] space-y-3">
+            <div>
+              <div className="text-[10px] font-heading font-bold uppercase tracking-widest text-[#8A95A8] mb-1">
+                Captain
+              </div>
+              <select
+                value={captain}
+                onChange={e => setCaptain(e.target.value)}
+                className="w-full bg-[#161E2E] border border-white/10 rounded-lg px-3 py-2 text-white font-bold text-sm outline-none cursor-pointer focus:border-[#FF6B2B]"
+              >
+                <option value="" disabled>Select Captain</option>
+                {Object.values(lineup).map(pid => {
+                  const p = acquiredPlayers.find(pl => pl.id === pid);
+                  return p ? <option key={pid} value={pid} className="bg-[#161E2E] text-white">{p.name} ({p.position})</option> : null;
+                })}
+              </select>
+            </div>
+
+            <div>
+              <div className="text-[10px] font-heading font-bold uppercase tracking-widest text-[#8A95A8] mb-1">
+                Vice Captain
+              </div>
+              <select
+                value={viceCaptain}
+                onChange={e => setViceCaptain(e.target.value)}
+                className="w-full bg-[#161E2E] border border-white/10 rounded-lg px-3 py-2 text-white font-bold text-sm outline-none cursor-pointer focus:border-[#FF6B2B]"
+              >
+                <option value="" disabled>Select Vice Captain</option>
+                {Object.values(lineup).map(pid => {
+                  const p = acquiredPlayers.find(pl => pl.id === pid);
+                  return p ? <option key={pid} value={pid} className="bg-[#161E2E] text-white">{p.name} ({p.position})</option> : null;
+                })}
+              </select>
+            </div>
+          </div>
         </div>
       </div>
-      
     </div>
   );
 }

@@ -102,6 +102,7 @@ export interface FormationSlot {
 
 export interface FinalizedSquad {
   userId: string;
+  roomCode?: string;
   formation: Formation;
   lineup: Array<{ slotIndex: number; playerId: string; position: Position }>;
   captain: string;              // playerId

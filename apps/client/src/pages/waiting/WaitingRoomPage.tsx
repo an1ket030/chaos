@@ -59,8 +59,11 @@ export function WaitingRoomPage() {
     (window as any).__dwSocket = socket;
 
     return () => {
-      socket.emit('room:leave');
-      socket.disconnect();
+      socket.off('connect');
+      socket.off('room:state');
+      socket.off('room:start');
+      socket.off('room:error');
+      socket.off('disconnect');
       (window as any).__dwSocket = null;
     };
   }, [code, user]);

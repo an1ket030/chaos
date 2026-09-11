@@ -12,7 +12,7 @@ import { simulateMatch, calculateChemistry, calculateEloChange } from '@chaos/sh
 import { verifyAccessToken, getUserById } from '../modules/auth/auth.service';
 import { createRoom, getRoom, joinRoom, setPlayerConnected } from '../modules/room/room.service';
 import { startAuction, handleBid, clearRoomTimers, handleSkip } from '../modules/auction/auction.engine';
-import { getRoomState, setRoomState } from '../config/redis';
+import { getRoomState, setRoomState, redis } from '../config/redis';
 import { query } from '../config/db';
 import { persistMatchResult, calculateAwards } from '../modules/match/match.service';
 import { z } from 'zod';
@@ -22,6 +22,14 @@ type AppSocket = Socket<ClientToServerEvents, ServerToClientEvents, InterServerE
 
 // Track finalized squads per room: code -> Map<userId, FinalizedSquad>
 const finalizedSquads = new Map<string, Map<string, FinalizedSquad>>();
+
+interface ActiveSimulationState {
+  matchups: Array<{ teamA: string; teamB: string }>;
+  events: any[];
+  score: Record<string, number>;
+  tournamentResult?: any;
+}
+const activeSimulations = new Map<string, ActiveSimulationState>();
 
 export function setupSocketGateway(io: IO): void {
   // ============================================================
@@ -85,6 +93,17 @@ export function setupSocketGateway(io: IO): void {
         const updatedRoom = await getRoom(upperCode);
         if (updatedRoom) {
           io.to(upperCode).emit('room:state', updatedRoom);
+        }
+
+        const activeSim = activeSimulations.get(upperCode);
+        if (activeSim) {
+          socket.emit('simulation:start', { matchups: activeSim.matchups });
+          for (const ev of activeSim.events) {
+            socket.emit('simulation:event', ev);
+          }
+          if (activeSim.tournamentResult) {
+            socket.emit('simulation:tournament_result', activeSim.tournamentResult);
+          }
         }
 
         callback({ success: true, room });
@@ -187,34 +206,88 @@ export function setupSocketGateway(io: IO): void {
 
     // ===== SQUAD: FINALIZE =====
     socket.on('squad:finalize', async (data, callback) => {
-      const code = socket.data.roomCode;
-      if (!code) { callback({ success: false, error: 'Not in a room' }); return; }
+      const code = socket.data.roomCode || (data?.roomCode ? data.roomCode.toUpperCase() : null);
+      if (!code) {
+        if (callback) callback({ success: false, error: 'Not in a room' });
+        return;
+      }
+      if (!socket.data.roomCode) {
+        socket.data.roomCode = code;
+        socket.join(code);
+      }
       try {
         const room = await getRoomState<RoomState>(code);
-        if (!room || room.status !== 'SQUAD_BUILDER') {
-          callback({ success: false, error: 'Not in squad builder phase' }); return;
+        if (!room) {
+          if (callback) callback({ success: false, error: 'Room not found' });
+          return;
         }
 
-        // Store this player's finalized squad
+        if (room.status !== 'SQUAD_BUILDER' && room.status !== 'SIMULATION') {
+          if (callback) callback({ success: false, error: 'Not in squad builder phase' });
+          return;
+        }
+
+        const effectiveUserId = socket.data.userId || data?.userId;
+
+        // Store this player's finalized squad in memory
         if (!finalizedSquads.has(code)) finalizedSquads.set(code, new Map());
-        finalizedSquads.get(code)!.set(socket.data.userId, data);
+        finalizedSquads.get(code)!.set(effectiveUserId, data);
+
+        // Also persist in Redis so squads survive across server reloads/reconnects
+        try {
+          await redis.hset(`squads:${code}`, effectiveUserId, JSON.stringify(data));
+        } catch (redisErr) {
+          console.error('[Socket] Failed to cache squad in Redis:', redisErr);
+        }
 
         io.to(code).emit('squad:player_submitted', {
-          userId: socket.data.userId,
+          userId: effectiveUserId,
           username: socket.data.username,
         });
 
-        callback({ success: true });
-
-        // Check if all players have submitted
+        // Check if all players have submitted (check both memory and Redis)
         const submitted = finalizedSquads.get(code)!;
-        if (submitted.size >= room.players.length) {
+        let submittedCount = submitted.size;
+        try {
+          const redisSquads = await redis.hgetall(`squads:${code}`);
+          if (redisSquads) {
+            submittedCount = Math.max(submittedCount, Object.keys(redisSquads).length);
+          }
+        } catch {}
+
+        const allReady = submittedCount >= room.players.length || room.status === 'SIMULATION';
+
+        if (callback) callback({ success: true, allReady });
+
+        if (allReady && room.status !== 'SIMULATION') {
+          room.status = 'SIMULATION';
+          await setRoomState(code, room);
           io.to(code).emit('squad:all_ready');
-          // Start simulation
-          await runSimulation(io, code, room);
+          io.to(code).emit('room:state', room);
+
+          // Grace period for all clients to mount SimulationPage before events start streaming
+          setTimeout(async () => {
+            await runSimulation(io, code, room);
+          }, 800);
         }
       } catch (err: unknown) {
-        callback({ success: false, error: err instanceof Error ? err.message : 'Finalize failed' });
+        if (callback) callback({ success: false, error: err instanceof Error ? err.message : 'Finalize failed' });
+      }
+    });
+
+    // ===== SIMULATION: SYNC =====
+    socket.on('simulation:sync', () => {
+      const code = socket.data.roomCode;
+      if (!code) return;
+      const activeSim = activeSimulations.get(code);
+      if (activeSim) {
+        socket.emit('simulation:start', { matchups: activeSim.matchups });
+        for (const ev of activeSim.events) {
+          socket.emit('simulation:event', ev);
+        }
+        if (activeSim.tournamentResult) {
+          socket.emit('simulation:tournament_result', activeSim.tournamentResult);
+        }
       }
     });
 
@@ -237,12 +310,32 @@ export function setupSocketGateway(io: IO): void {
 // SIMULATION RUNNER (system-driven)
 // ============================================================
 async function runSimulation(io: IO, code: string, room: RoomState): Promise<void> {
-  const squads = finalizedSquads.get(code);
+  let squads = finalizedSquads.get(code);
+
+  // Recover squads from Redis if in-memory Map is incomplete
+  if (!squads || squads.size < room.players.length) {
+    try {
+      const cached = await redis.hgetall(`squads:${code}`);
+      if (cached && Object.keys(cached).length > 0) {
+        if (!finalizedSquads.has(code)) finalizedSquads.set(code, new Map());
+        for (const [uId, raw] of Object.entries(cached)) {
+          try {
+            finalizedSquads.get(code)!.set(uId, JSON.parse(raw));
+          } catch {}
+        }
+        squads = finalizedSquads.get(code);
+      }
+    } catch (e) {
+      console.error('[Simulation] Failed to load squads from Redis:', e);
+    }
+  }
+
   if (!squads) return;
 
   room.status = 'SIMULATION';
   await setRoomState(code, room);
   io.to(code).emit('room:state', room);
+  io.to(code).emit('squad:all_ready');
 
   const players = room.players;
   const allResults: ReturnType<typeof simulateMatch>[] = [];
@@ -254,6 +347,12 @@ async function runSimulation(io: IO, code: string, room: RoomState): Promise<voi
       matchups.push({ teamA: players[i].userId, teamB: players[j].userId });
     }
   }
+
+  activeSimulations.set(code, {
+    matchups,
+    events: [],
+    score: {},
+  });
 
   io.to(code).emit('simulation:start', { matchups });
 
@@ -299,7 +398,7 @@ async function runSimulation(io: IO, code: string, room: RoomState): Promise<voi
     // Stream events with delay for drama
     for (const event of result.events) {
       await new Promise((r) => setTimeout(r, 400));
-      io.to(code).emit('simulation:event', {
+      const eventPayload = {
         minute: event.minute,
         type: event.type as 'goal' | 'assist' | 'yellow' | 'red' | 'save' | 'key_pass',
         teamId: event.teamId,
@@ -310,7 +409,13 @@ async function runSimulation(io: IO, code: string, room: RoomState): Promise<voi
           [result.teamA.userId]: result.scoreA,
           [result.teamB.userId]: result.scoreB,
         },
-      });
+      };
+      const activeSim = activeSimulations.get(code);
+      if (activeSim) {
+        activeSim.events.push(eventPayload);
+        activeSim.score = eventPayload.score;
+      }
+      io.to(code).emit('simulation:event', eventPayload);
     }
 
     // Emit match result
@@ -347,12 +452,18 @@ async function runSimulation(io: IO, code: string, room: RoomState): Promise<voi
   // Awards
   const awards = calculateAwards(room, allResults);
 
-  io.to(code).emit('simulation:tournament_result', {
+  const tourneyData = {
     winner: winner.userId,
     winnerUsername: winner.username,
     allResults,
     awards,
-  });
+  };
+  const activeSim = activeSimulations.get(code);
+  if (activeSim) {
+    activeSim.tournamentResult = tourneyData;
+  }
+
+  io.to(code).emit('simulation:tournament_result', tourneyData);
 
   // Save game to DB with ELO updates and participant stats
   try {
@@ -368,7 +479,14 @@ async function runSimulation(io: IO, code: string, room: RoomState): Promise<voi
     console.error('Failed to persist game result:', err);
   }
 
+  // Set room status to RESULTS so clients and state advance
+  room.status = 'RESULTS';
+  await setRoomState(code, room);
+  io.to(code).emit('room:state', room);
+
   // Clean up
   finalizedSquads.delete(code);
+  try { await redis.del(`squads:${code}`); } catch {}
   clearRoomTimers(code);
+  setTimeout(() => activeSimulations.delete(code), 300000);
 }
