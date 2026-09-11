@@ -30,8 +30,78 @@ interface ActiveSimulationState {
   tournamentResult?: any;
 }
 const activeSimulations = new Map<string, ActiveSimulationState>();
+let globalIo: IO | null = null;
+export function getIO(): IO | null {
+  return globalIo;
+}
+
+export async function processSquadFinalize(
+  code: string,
+  userId: string,
+  username: string,
+  data: any,
+): Promise<{ success: boolean; allReady: boolean; error?: string }> {
+  const upperCode = code.toUpperCase();
+  const room = await getRoomState<RoomState>(upperCode);
+  if (!room) {
+    return { success: false, allReady: false, error: 'Room not found' };
+  }
+
+  if (room.status !== 'SQUAD_BUILDER' && room.status !== 'SIMULATION') {
+    return { success: false, allReady: false, error: 'Not in squad builder phase' };
+  }
+
+  // Store this player's finalized squad in memory
+  if (!finalizedSquads.has(upperCode)) finalizedSquads.set(upperCode, new Map());
+  finalizedSquads.get(upperCode)!.set(userId, data);
+
+  // Also persist in Redis so squads survive across server reloads/reconnects
+  try {
+    await redis.hset(`squads:${upperCode}`, userId, JSON.stringify(data));
+  } catch (redisErr) {
+    console.error('[Squad] Failed to cache squad in Redis:', redisErr);
+  }
+
+  if (globalIo) {
+    globalIo.to(upperCode).emit('squad:player_submitted', {
+      userId,
+      username,
+    });
+  }
+
+  // Check if all players have submitted (check both memory and Redis)
+  const submitted = finalizedSquads.get(upperCode)!;
+  let submittedCount = submitted.size;
+  try {
+    const redisSquads = await redis.hgetall(`squads:${upperCode}`);
+    if (redisSquads) {
+      submittedCount = Math.max(submittedCount, Object.keys(redisSquads).length);
+    }
+  } catch {}
+
+  const allReady = submittedCount >= room.players.length || room.status === 'SIMULATION';
+
+  if (allReady && room.status !== 'SIMULATION') {
+    room.status = 'SIMULATION';
+    await setRoomState(upperCode, room);
+    if (globalIo) {
+      globalIo.to(upperCode).emit('squad:all_ready');
+      globalIo.to(upperCode).emit('room:state', room);
+
+      // Synchronized countdown transition: wait 3.5s for 3-2-1 countdown on clients
+      setTimeout(async () => {
+        if (globalIo) {
+          await runSimulation(globalIo, upperCode, room);
+        }
+      }, 3500);
+    }
+  }
+
+  return { success: true, allReady };
+}
 
 export function setupSocketGateway(io: IO): void {
+  globalIo = io;
   // ============================================================
   // AUTH MIDDLEWARE ON SOCKET HANDSHAKE
   // ============================================================
@@ -216,60 +286,9 @@ export function setupSocketGateway(io: IO): void {
         socket.join(code);
       }
       try {
-        const room = await getRoomState<RoomState>(code);
-        if (!room) {
-          if (callback) callback({ success: false, error: 'Room not found' });
-          return;
-        }
-
-        if (room.status !== 'SQUAD_BUILDER' && room.status !== 'SIMULATION') {
-          if (callback) callback({ success: false, error: 'Not in squad builder phase' });
-          return;
-        }
-
         const effectiveUserId = socket.data.userId || data?.userId;
-
-        // Store this player's finalized squad in memory
-        if (!finalizedSquads.has(code)) finalizedSquads.set(code, new Map());
-        finalizedSquads.get(code)!.set(effectiveUserId, data);
-
-        // Also persist in Redis so squads survive across server reloads/reconnects
-        try {
-          await redis.hset(`squads:${code}`, effectiveUserId, JSON.stringify(data));
-        } catch (redisErr) {
-          console.error('[Socket] Failed to cache squad in Redis:', redisErr);
-        }
-
-        io.to(code).emit('squad:player_submitted', {
-          userId: effectiveUserId,
-          username: socket.data.username,
-        });
-
-        // Check if all players have submitted (check both memory and Redis)
-        const submitted = finalizedSquads.get(code)!;
-        let submittedCount = submitted.size;
-        try {
-          const redisSquads = await redis.hgetall(`squads:${code}`);
-          if (redisSquads) {
-            submittedCount = Math.max(submittedCount, Object.keys(redisSquads).length);
-          }
-        } catch {}
-
-        const allReady = submittedCount >= room.players.length || room.status === 'SIMULATION';
-
-        if (callback) callback({ success: true, allReady });
-
-        if (allReady && room.status !== 'SIMULATION') {
-          room.status = 'SIMULATION';
-          await setRoomState(code, room);
-          io.to(code).emit('squad:all_ready');
-          io.to(code).emit('room:state', room);
-
-          // Synchronized countdown transition: wait 3.5s for 3-2-1 countdown on clients
-          setTimeout(async () => {
-            await runSimulation(io, code, room);
-          }, 3500);
-        }
+        const result = await processSquadFinalize(code, effectiveUserId, socket.data.username || 'Manager', data);
+        if (callback) callback(result);
       } catch (err: unknown) {
         if (callback) callback({ success: false, error: err instanceof Error ? err.message : 'Finalize failed' });
       }

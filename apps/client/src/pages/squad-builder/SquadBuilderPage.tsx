@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRoomStore } from '../../store/roomStore';
@@ -86,6 +86,8 @@ export function SquadBuilderPage() {
   const [viceCaptain, setViceCaptain] = useState<string>('');
   const [isReady, setIsReady] = useState(false);
   const [matchCountdown, setMatchCountdown] = useState<number | null>(null);
+  const matchCountdownRef = useRef<number | null>(matchCountdown);
+  matchCountdownRef.current = matchCountdown;
 
   // Synchronized countdown timer before match simulation
   useEffect(() => {
@@ -141,8 +143,8 @@ export function SquadBuilderPage() {
       if (!state) return;
       setRoom(state);
       if (state.status === 'SIMULATION') {
-        if (matchCountdown === null) {
-          navigate(`/room/${upperCode}/simulation`);
+        if (matchCountdownRef.current === null) {
+          setMatchCountdown(3);
         }
       } else if (state.status === 'RESULTS') {
         navigate(`/room/${upperCode}/results`);
@@ -150,7 +152,9 @@ export function SquadBuilderPage() {
     };
 
     const onSquadAllReady = () => {
-      setMatchCountdown(3);
+      if (matchCountdownRef.current === null) {
+        setMatchCountdown(3);
+      }
     };
 
     const onSimulationStart = () => {
@@ -166,7 +170,7 @@ export function SquadBuilderPage() {
       socket.off('squad:all_ready', onSquadAllReady);
       socket.off('simulation:start', onSimulationStart);
     };
-  }, [code, user, socket, navigate, setRoom, matchCountdown]);
+  }, [code, user, socket, navigate, setRoom]);
 
   // Polling fallback while waiting for other players
   useEffect(() => {
@@ -178,13 +182,17 @@ export function SquadBuilderPage() {
         const { data } = await api.get(`/rooms/${upperCode}`);
         if (data?.status === 'SIMULATION') {
           clearInterval(interval);
-          navigate(`/room/${upperCode}/simulation`);
+          if (matchCountdownRef.current === null) {
+            setMatchCountdown(3);
+          }
         } else if (data?.status === 'RESULTS') {
           clearInterval(interval);
           navigate(`/room/${upperCode}/results`);
         }
-      } catch {}
-    }, 1200);
+      } catch (err) {
+        console.warn('Squad builder poll warning:', err);
+      }
+    }, 2000);
 
     return () => clearInterval(interval);
   }, [isReady, code, navigate, matchCountdown]);
@@ -288,7 +296,7 @@ export function SquadBuilderPage() {
     if (viceCaptain === pId) setViceCaptain('');
   };
 
-  const handleReady = () => {
+  const handleReady = async () => {
     if (Object.keys(lineup).length < 11) {
       alert("Please place all 11 players in your Starting XI!");
       return;
@@ -304,9 +312,10 @@ export function SquadBuilderPage() {
       };
     });
 
+    const upperCode = code?.toUpperCase() || '';
     const payload = {
       userId: user?.id || 'mock',
-      roomCode: code?.toUpperCase(),
+      roomCode: upperCode,
       formation,
       lineup: formattedLineup,
       captain: captain || formattedLineup[0].playerId,
@@ -315,12 +324,29 @@ export function SquadBuilderPage() {
       chemistry,
     };
 
-    socket.emit('squad:finalize', payload as any, (res: any) => {
-      if (res?.success) {
-        if (res.allReady) {
+    let submitted = false;
+
+    // Guaranteed REST path: ensures squad is saved to Redis even if WebSocket has issues
+    try {
+      const { data } = await api.post(`/rooms/${upperCode}/finalize-squad`, payload);
+      if (data?.success) {
+        submitted = true;
+        if (data.allReady && matchCountdownRef.current === null) {
           setMatchCountdown(3);
         }
-      } else {
+      }
+    } catch (err: any) {
+      console.warn('REST finalize notice:', err?.response?.data || err.message);
+    }
+
+    // Real-time socket emission
+    socket.emit('squad:finalize', payload as any, (res: any) => {
+      if (res?.success) {
+        submitted = true;
+        if (res.allReady && matchCountdownRef.current === null) {
+          setMatchCountdown(3);
+        }
+      } else if (!submitted) {
         setIsReady(false);
         alert(res?.error || 'Failed to submit squad');
       }

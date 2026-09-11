@@ -47,8 +47,14 @@ async function main() {
   // Middleware
   app.use(helmet({ contentSecurityPolicy: false }));
   app.use(cors({ origin: [env.CLIENT_URL, 'http://localhost:5173'], credentials: true }));
-  app.use(express.json({ limit: '1mb' }));
-  app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 100, standardHeaders: true }));
+  app.use(express.json());
+  app.use(express.urlencoded({ extended: true }));
+  // Rate limiting (scoped to production auth routes to avoid throttling dev/gameplay)
+  if (env.NODE_ENV === 'production') {
+    const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 50, standardHeaders: true });
+    app.use('/auth/login', authLimiter);
+    app.use('/auth/register', authLimiter);
+  }
 
   // Routes
   app.use('/auth', authRouter);

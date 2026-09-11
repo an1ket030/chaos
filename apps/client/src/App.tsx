@@ -38,9 +38,11 @@ export default function App() {
         try {
           const { data } = await api.get('/auth/me');
           setUser(data);
-        } catch {
-          localStorage.removeItem('accessToken');
-          localStorage.removeItem('refreshToken');
+        } catch (err: any) {
+          if (err?.response?.status === 401) {
+            localStorage.removeItem('accessToken');
+            localStorage.removeItem('refreshToken');
+          }
         }
       }
       setLoading(false);

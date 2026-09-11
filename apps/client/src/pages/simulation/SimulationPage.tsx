@@ -29,6 +29,8 @@ export function SimulationPage() {
   const [finalResult, setFinalResult] = useState<any>(null);
   const [goalFlash, setGoalFlash] = useState<string | null>(null);
   const feedRef = useRef<HTMLDivElement>(null);
+  const scoreRef = useRef(score);
+  scoreRef.current = score;
 
   // Initial load: fetch room state from REST
   useEffect(() => {
@@ -89,7 +91,7 @@ export function SimulationPage() {
         setScore(data.score);
         if (data.type === 'goal') {
           const scoringTeam = Object.entries(data.score).find(([id]) => {
-            const prev = score[id] ?? 0;
+            const prev = scoreRef.current[id] ?? 0;
             return (data.score[id] as number) > prev;
           })?.[0];
           if (scoringTeam) {
@@ -127,7 +129,7 @@ export function SimulationPage() {
       socket.off('simulation:result', onSimResult);
       socket.off('simulation:tournament_result', onTournamentResult);
     };
-  }, [code, socket, navigate, setRoom, score]);
+  }, [code, socket, navigate, setRoom]);
 
   // Fallback poll: if simulation has completed or progressed to RESULTS
   useEffect(() => {

@@ -89,3 +89,27 @@ roomRouter.get('/:code/results', requireAuth, async (req: AuthRequest, res) => {
     res.status(500).json({ error: 'Server error' });
   }
 });
+
+// POST /rooms/:code/finalize-squad — submit squad via REST (rock-solid dual path)
+roomRouter.post('/:code/finalize-squad', requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const code = (req.params.code as string).toUpperCase();
+    const user = await getUserById(req.userId!);
+    if (!user) {
+      res.status(404).json({ error: 'User not found' });
+      return;
+    }
+
+    const { processSquadFinalize } = await import('../gateway/socket.gateway');
+    const result = await processSquadFinalize(code, req.userId!, user.username, req.body);
+    if (!result.success) {
+      res.status(400).json(result);
+      return;
+    }
+    res.json(result);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Failed to finalize squad';
+    res.status(500).json({ error: message });
+  }
+});
+

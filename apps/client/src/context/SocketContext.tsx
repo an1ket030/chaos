@@ -4,6 +4,8 @@ import type { ServerToClientEvents, ClientToServerEvents } from '@chaos/shared';
 import { useRoomStore } from '../store/roomStore';
 import { useAuctionStore } from '../store/auctionStore';
 
+import { useAuthStore } from '../store/authStore';
+
 export type AppSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
 
 interface SocketContextValue {
@@ -29,6 +31,7 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
 
   const { setConnectionStatus, setRoom, setError } = useRoomStore();
   const { addEvent, setChaosOverlay } = useAuctionStore();
+  const { user } = useAuthStore();
   const socketRef = useRef<AppSocket | null>(null);
 
   const initSocket = () => {
@@ -36,12 +39,13 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
       socketRef.current.disconnect();
     }
 
-    const token = localStorage.getItem('accessToken') || '';
     const instance: AppSocket = io(SERVER_URL, {
       autoConnect: true,
-      auth: { token },
+      auth: (cb: (data: object) => void) => {
+        cb({ token: localStorage.getItem('accessToken') || '' });
+      },
       reconnection: true,
-      reconnectionAttempts: 10,
+      reconnectionAttempts: 20,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
     });
@@ -99,6 +103,12 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (user && socketRef.current && !socketRef.current.connected) {
+      socketRef.current.connect();
+    }
+  }, [user]);
 
   const reconnect = () => {
     initSocket();
