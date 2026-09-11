@@ -265,10 +265,10 @@ export function setupSocketGateway(io: IO): void {
           io.to(code).emit('squad:all_ready');
           io.to(code).emit('room:state', room);
 
-          // Grace period for all clients to mount SimulationPage before events start streaming
+          // Synchronized countdown transition: wait 3.5s for 3-2-1 countdown on clients
           setTimeout(async () => {
             await runSimulation(io, code, room);
-          }, 800);
+          }, 3500);
         }
       } catch (err: unknown) {
         if (callback) callback({ success: false, error: err instanceof Error ? err.message : 'Finalize failed' });
@@ -365,17 +365,35 @@ async function runSimulation(io: IO, code: string, room: RoomState): Promise<voi
 
     if (!squadA || !squadB) continue;
 
-    const simPlayers = (ps: typeof playerA, sq: typeof squadA) =>
-      ps.squad
+    const buildTeamPlayers = (ps: typeof playerA, sq: typeof squadA) => {
+      const playerMap = new Map<string, typeof ps.squad[0]['player']>();
+      ps.squad.forEach((s) => {
+        if (s.player) playerMap.set(s.player.id, s.player);
+      });
+
+      if (sq.lineup && sq.lineup.length > 0) {
+        const mapped = sq.lineup
+          .map((l) => {
+            const p = playerMap.get(l.playerId);
+            if (!p) return null;
+            return {
+              ...p,
+              position: l.position,
+            };
+          })
+          .filter((p): p is NonNullable<typeof p> => p !== null);
+        if (mapped.length > 0) return mapped;
+      }
+
+      return ps.squad
         .filter((s) => s.player !== null)
-        .map((s) => ({
-          ...s.player!,
-        }));
+        .map((s) => ({ ...s.player! }));
+    };
 
     const teamA: SimTeam = {
       userId: playerA.userId,
       username: playerA.username,
-      players: simPlayers(playerA, squadA),
+      players: buildTeamPlayers(playerA, squadA),
       formation: squadA.formation,
       captain: squadA.captain,
       overallRating: squadA.overallRating,
@@ -385,7 +403,7 @@ async function runSimulation(io: IO, code: string, room: RoomState): Promise<voi
     const teamB: SimTeam = {
       userId: playerB.userId,
       username: playerB.username,
-      players: simPlayers(playerB, squadB),
+      players: buildTeamPlayers(playerB, squadB),
       formation: squadB.formation,
       captain: squadB.captain,
       overallRating: squadB.overallRating,

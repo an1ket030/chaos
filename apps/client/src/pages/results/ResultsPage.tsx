@@ -248,7 +248,7 @@ export function ResultsPage() {
           >
             <Avatar username={winner.username} url={winner.avatarUrl} size="lg" />
             <div>
-              <div className="font-display text-5xl md:text-6xl text-gradient-gold">{winner.username.toUpperCase()}</div>
+              <div className="font-display text-5xl md:text-6xl text-gradient-gold">{winner.username.toUpperCase()}'S XI</div>
               {winner.overallRating > 0 && (
                 <div className="font-mono text-sm mt-1" style={{ color: '#8A95A8' }}>
                   Squad Rating: <span style={{ color: '#E8B84B' }}>{winner.overallRating}</span>
@@ -357,7 +357,7 @@ export function ResultsPage() {
 
                   <div className="flex-1 min-w-0">
                     <div className="font-heading font-bold text-lg text-white uppercase flex items-center gap-2">
-                      {s.username}
+                      {s.username}'s XI
                       {s.userId === user?.id && (
                         <span className="text-xs font-mono px-1.5 py-0.5 rounded" style={{ background: 'rgba(255,107,43,0.12)', color: '#FF6B2B' }}>you</span>
                       )}
@@ -430,7 +430,7 @@ export function ResultsPage() {
                         {PLACE_LABELS[idx]}
                       </span>
                       <Avatar username={s.username} url={s.avatarUrl} size="sm" />
-                      <span className="font-heading font-bold uppercase text-white">{s.username}</span>
+                      <span className="font-heading font-bold uppercase text-white">{s.username}'s XI</span>
                     </div>
                     <div className="font-num font-bold" style={{ color: '#FF6B2B' }}>
                       OVR {s.overallRating}

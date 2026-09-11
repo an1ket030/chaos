@@ -603,28 +603,42 @@ export function AuctionRoomPage() {
                       style={{ width: `${myBudgetPct}%`, background: bc }} />
                   </div>
 
-                  {/* Squad slots */}
-                  <div className="grid grid-cols-6 gap-0.5">
-                    {p.squad.map((slot: any, i: number) => (
-                      <div
-                        key={i}
-                        title={slot.player ? `${slot.player.name} (${slot.purchasePrice}CP)` : slot.position}
-                        className="h-4 rounded text-[7px] flex items-center justify-center font-bold"
-                        style={{
-                          background: slot.player
-                            ? (slot.isSystemPick ? 'rgba(155,93,229,0.25)' : 'rgba(255,107,43,0.2)')
-                            : 'rgba(255,255,255,0.03)',
-                          color: slot.player
-                            ? (slot.isSystemPick ? '#9B5DE5' : '#FF6B2B')
-                            : '#3A4458',
-                          border: `1px solid ${slot.player
-                            ? (slot.isSystemPick ? 'rgba(155,93,229,0.3)' : 'rgba(255,107,43,0.25)')
-                            : 'rgba(255,255,255,0.05)'}`,
-                        }}
-                      >
-                        {slot.position.substring(0, 2)}
-                      </div>
-                    ))}
+                  {/* Squad slots header */}
+                  <div className="flex items-center justify-between text-[10px] font-mono text-[#8A95A8] mb-1.5">
+                    <span>SQUAD ROSTER</span>
+                    <span className="text-white font-bold">{p.squad.filter((s: any) => s.player !== null).length}/11</span>
+                  </div>
+
+                  {/* Squad slots grid */}
+                  <div className="grid grid-cols-6 gap-1">
+                    {p.squad.map((slot: any, i: number) => {
+                      const isFilled = !!slot.player;
+                      return (
+                        <div
+                          key={i}
+                          title={isFilled ? `${slot.player.name} (${slot.player.rating} OVR • ${slot.purchasePrice} CP)` : `Open ${slot.position} slot`}
+                          className="h-6 rounded text-[9px] flex flex-col items-center justify-center font-mono font-bold transition-all relative group cursor-default"
+                          style={{
+                            background: isFilled
+                              ? (slot.isSystemPick ? 'rgba(155,93,229,0.25)' : 'rgba(255,107,43,0.18)')
+                              : 'rgba(255,255,255,0.03)',
+                            color: isFilled
+                              ? (slot.isSystemPick ? '#C49BFF' : '#FF8C4B')
+                              : '#4A5568',
+                            border: `1px solid ${isFilled
+                              ? (slot.isSystemPick ? 'rgba(155,93,229,0.5)' : 'rgba(255,107,43,0.45)')
+                              : 'rgba(255,255,255,0.06)'}`,
+                          }}
+                        >
+                          <span className="leading-none text-[8px]">{slot.position}</span>
+                          {isFilled && (
+                            <span className="text-[8px] font-bold text-white leading-none mt-0.5">
+                              {slot.player.rating}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
 
                   {p.transferBan?.active && (

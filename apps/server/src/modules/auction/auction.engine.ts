@@ -1,5 +1,5 @@
 import type { Server, Socket } from 'socket.io';
-import type { RoomState, Player, Position, PlayerState } from '@chaos/shared';
+import type { RoomState, Player, Position, PlayerState, SquadSlot } from '@chaos/shared';
 import { getRoomState, setRoomState } from '../../config/redis';
 import { shouldTriggerCard, selectCard, selectTargets, applyCardEffect } from '../chaos/chaos.engine';
 import type { ServerToClientEvents, ClientToServerEvents, InterServerEvents, SocketData } from '@chaos/shared';
@@ -9,6 +9,41 @@ type IO = Server<ClientToServerEvents, ServerToClientEvents, InterServerEvents, 
 // Active timers per room
 const bidTimers = new Map<string, ReturnType<typeof setTimeout>>();
 const roundTimers = new Map<string, ReturnType<typeof setTimeout>>();
+
+function findBestEmptySlot(squad: SquadSlot[], player: Player): SquadSlot | undefined {
+  // 1. Exact position match
+  const exact = squad.find((s) => s.player === null && s.position === player.position);
+  if (exact) return exact;
+
+  // 2. Category match
+  const isGK = (pos: string) => pos === 'GK';
+  const isDef = (pos: string) => ['CB', 'LB', 'RB', 'LWB', 'RWB'].includes(pos);
+  const isMid = (pos: string) => ['CM', 'CDM', 'CAM', 'LM', 'RM'].includes(pos);
+  const isFwd = (pos: string) => ['ST', 'CF', 'LW', 'RW'].includes(pos);
+
+  if (isGK(player.position)) {
+    const gkSlot = squad.find((s) => s.player === null && isGK(s.position));
+    if (gkSlot) return gkSlot;
+  } else if (isDef(player.position)) {
+    const defSlot = squad.find((s) => s.player === null && isDef(s.position));
+    if (defSlot) return defSlot;
+  } else if (isMid(player.position)) {
+    const midSlot = squad.find((s) => s.player === null && isMid(s.position));
+    if (midSlot) return midSlot;
+  } else if (isFwd(player.position)) {
+    const fwdSlot = squad.find((s) => s.player === null && isFwd(s.position));
+    if (fwdSlot) return fwdSlot;
+  }
+
+  // 3. Outfield empty slot if player is outfield
+  if (!isGK(player.position)) {
+    const nonGk = squad.find((s) => s.player === null && !isGK(s.position));
+    if (nonGk) return nonGk;
+  }
+
+  // 4. Any empty slot remaining
+  return squad.find((s) => s.player === null);
+}
 
 async function updateAndBroadcast(io: IO, code: string, room: RoomState): Promise<void> {
   await setRoomState(code, room);
@@ -368,10 +403,11 @@ async function soldPlayer(io: IO, code: string): Promise<void> {
   const winner = room.players.find((p) => p.userId === winnerId);
   if (winner) {
     winner.budget -= finalPrice;
-    const emptySlot = winner.squad.find((s) => s.player === null);
-    if (emptySlot) {
-      emptySlot.player = player;
-      emptySlot.purchasePrice = finalPrice;
+    const slot = findBestEmptySlot(winner.squad, player);
+    if (slot) {
+      slot.player = player;
+      slot.purchasePrice = finalPrice;
+      slot.position = player.position;
       winner.filledSlots++;
     }
   }
@@ -523,19 +559,23 @@ async function checkBankruptcy(io: IO, code: string, room: RoomState): Promise<v
 
       // Auto-fill with cheapest available players
       const autoPlayers: typeof room.remainingPlayers = [];
-      const emptySlots = player.squad.filter((s) => s.player === null);
-      for (const slot of emptySlots) {
+      const emptyCount = player.squad.filter((s) => s.player === null).length;
+      for (let i = 0; i < emptyCount; i++) {
         if (room.remainingPlayers.length === 0) break;
         const cheapIdx = room.remainingPlayers.reduce(
           (minIdx, p, idx, arr) => p.baseValue < arr[minIdx].baseValue ? idx : minIdx,
           0,
         );
         const [cheapPlayer] = room.remainingPlayers.splice(cheapIdx, 1);
-        slot.player = cheapPlayer;
-        slot.purchasePrice = 0;
-        slot.isSystemPick = true;
-        player.filledSlots++;
-        autoPlayers.push(cheapPlayer);
+        const targetSlot = findBestEmptySlot(player.squad, cheapPlayer) || player.squad.find(s => s.player === null);
+        if (targetSlot) {
+          targetSlot.player = cheapPlayer;
+          targetSlot.purchasePrice = 0;
+          targetSlot.position = cheapPlayer.position;
+          targetSlot.isSystemPick = true;
+          player.filledSlots++;
+          autoPlayers.push(cheapPlayer);
+        }
       }
 
       io.to(code).emit('auction:auto_fill', {
@@ -557,18 +597,22 @@ async function endAuction(io: IO, code: string): Promise<void> {
 
   // Auto-fill any remaining empty slots due to skips
   for (const player of room.players) {
-    const emptySlots = player.squad.filter(s => s.player === null);
-    for (const slot of emptySlots) {
+    const emptyCount = player.squad.filter(s => s.player === null).length;
+    for (let i = 0; i < emptyCount; i++) {
       if (room.remainingPlayers.length === 0) break;
       const cheapIdx = room.remainingPlayers.reduce(
         (minIdx, p, idx, arr) => p.baseValue < arr[minIdx].baseValue ? idx : minIdx,
         0,
       );
       const [cheapPlayer] = room.remainingPlayers.splice(cheapIdx, 1);
-      slot.player = cheapPlayer;
-      slot.purchasePrice = 0;
-      slot.isSystemPick = true;
-      player.filledSlots++;
+      const targetSlot = findBestEmptySlot(player.squad, cheapPlayer) || player.squad.find(s => s.player === null);
+      if (targetSlot) {
+        targetSlot.player = cheapPlayer;
+        targetSlot.purchasePrice = 0;
+        targetSlot.position = cheapPlayer.position;
+        targetSlot.isSystemPick = true;
+        player.filledSlots++;
+      }
     }
   }
 

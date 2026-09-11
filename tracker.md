@@ -92,22 +92,32 @@ OVERALL ROADMAP:  [======--------------------------] 21% (18/86 Total Milestones
   - Styled match events feed for Goals, Saves, Yellow/Red Cards, and Substitutions.
   - Auto-transition to Results at final whistle.
 
-#### 1.7 Results Screen & Climax
-- [x] **Results Page Complete Rebuild** (`apps/client/src/pages/results/ResultsPage.tsx`)
-  - Full-screen winner spotlight with gold victory banner and dynamic canvas confetti.
-  - Final standings leaderboard (1st–4th) with squad OVR, scoreline, and ELO point delta ($\pm \Delta$).
-  - Post-match awards showcase: Best Value Pick, Biggest Robbery, Overpaid Manager, Chaos Magnet, Clean Sheet, Attack of the Match.
-  - Result card share modal with exportable match summary.
-  - Instant rematch and hub navigation flows.
-- [x] **Match Simulation Transition & Squad Builder Flow Fix** (`SquadBuilderPage.tsx`, `SimulationPage.tsx`, `socket.gateway.ts`)
-  - Resolved hanging spinner state on squad confirmation across multiplayer clients.
-  - Replaced ad-hoc raw socket connections with unified singleton socket lifecycle (`useSocket()`).
-  - Removed destructive `socket.disconnect()` calls on page unmount during internal room navigation.
-  - Added Redis persistence for finalized squads (`squads:{code}`) to survive reloads and reconnects.
-  - Added multi-event navigation triggers (`squad:all_ready`, `room:state`, `simulation:start`, and fallback REST poll).
-  - Built active simulation event cache on server with `simulation:sync` for seamless re-sync.
-  - Transitioned room status to `RESULTS` in Redis upon match simulation conclusion.
-  - Fully redesigned `SquadBuilderPage.tsx` and `Button.tsx` to match the DraftWar brand tokens (`--dw-void`, `--dw-surface`, `--dw-fire`, `--dw-gold`).
+#### 1.8 Phase 1 Feedback Overhaul & Quality Polish (Post-Test Enhancements)
+- [x] **Symmetrical Lobby Command Cards** (`apps/client/src/pages/lobby/LobbyPage.tsx`)
+  - Perfectly aligned Host a War and Join Battle cards with identical outer dimensions (`min-h-[360px] flex flex-col justify-between`).
+  - Symmetrical icon badges (Commander & Operator pills), aligned headings, and identical button heights/styling.
+- [x] **Solid Tactical Onboarding & DB Persistence** (`OnboardingModal.tsx`, `auth.service.ts`, `auth.router.ts`, `schema.sql`)
+  - Completely stripped glassmorphic backdrop-blur and translucent cards; upgraded to solid dark tactical carbon panels (`#0F1520` / `#161E2E`) with fire-orange corner brackets.
+  - Added `has_completed_onboarding BOOLEAN DEFAULT false` to PostgreSQL `users` table and `POST /auth/complete-onboarding` endpoint. Returning users never see onboarding again across any session or device.
+- [x] **Auction Engine Natural Position Squad Slot Mapping** (`apps/server/src/modules/auction/auction.engine.ts`)
+  - Fixed blind index assignment bug (`find(s => s.player === null)`).
+  - Implemented `findBestEmptySlot()` with exact position matching, category matching (GK, DEF, MID, FWD), and outfield protection.
+  - Auction sidebar now displays true position labels, player ratings, and purchase prices on squad slots.
+- [x] **Fair & Calibrated Match Simulation Engine** (`packages/shared/src/utils/simulation.ts`, `socket.gateway.ts`)
+  - Enforced severe 50% defense score penalty when playing without a genuine goalkeeper.
+  - Scaled chemistry effect to dynamic $\pm 15\%$ team efficiency factor.
+  - Calibrated expected goals ($\lambda$) realistically from rating differentials while removing the arbitrary 15% upset boost.
+  - Lineup pitch positions mapped directly to simulation team rosters.
+- [x] **Manager's XI Branding Hierarchy** (`simulation.ts`, `SimulationPage.tsx`, `ResultsPage.tsx`)
+  - Full consistency across the simulation experience: "[Manager]'s XI" displayed on scoreboards, live broadcast commentary feed, winner banners, and final tournament standings.
+- [x] **Tactical Character Manager Avatar System** (`apps/client/src/components/ui/Avatar.tsx`, `avatars.ts`)
+  - Completely replaced letter-based colored circles with high-res tactical character portraits with cyber visors and tactical rank frames.
+- [x] **Proportional 3:4 Vertical Football Pitch** (`apps/client/src/pages/squad-builder/SquadBuilderPage.tsx`)
+  - Fixed oversized square horizontal pitch stretch by constraining the pitch to an authentic 3:4 vertical aspect ratio (`aspect-[3/4] h-full max-w-full mx-auto`).
+- [x] **Synchronized 3-Second Kickoff Countdown Transition** (`SquadBuilderPage.tsx`, `socket.gateway.ts`)
+  - When Manager 1 confirms, visual state updates to "SQUAD LOCKED · WAITING FOR RIVAL MANAGERS...".
+  - When Manager 2 confirms, server emits `squad:all_ready`, triggering a synchronized 3-2-1 tactical countdown modal on all clients before navigating to simulation.
+  - Server delays match event streaming by 3.5s to align seamlessly with client mount.
 - [x] **Backend Match Results API** (`apps/server/src/routes/room.router.ts`, `room.service.ts`)
   - `GET /rooms/:code/results` endpoint calculating final standings, squad OVRs, and awards from Redis room state.
 

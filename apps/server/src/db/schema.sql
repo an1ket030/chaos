@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS users (
   best_squad_rating DECIMAL(5,2) DEFAULT 0,
   favorite_formation VARCHAR(16),
   chaos_cards_received INTEGER DEFAULT 0,
+  has_completed_onboarding BOOLEAN DEFAULT false,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );

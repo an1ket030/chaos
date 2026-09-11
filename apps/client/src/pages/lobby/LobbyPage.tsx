@@ -342,7 +342,18 @@ export function LobbyPage() {
   const [joinCode, setJoinCode] = useState('');
   const [joinError, setJoinError] = useState('');
   const [showCreate, setShowCreate] = useState(false);
-  const [showOnboarding, setShowOnboarding] = useState(() => !localStorage.getItem('draftwar_onboarding_seen'));
+  const [showOnboarding, setShowOnboarding] = useState(() => {
+    if (localStorage.getItem('draftwar_onboarding_seen') === 'true') return false;
+    return !user?.has_completed_onboarding;
+  });
+
+  useEffect(() => {
+    if (user?.has_completed_onboarding) {
+      localStorage.setItem('draftwar_onboarding_seen', 'true');
+      setShowOnboarding(false);
+    }
+  }, [user?.has_completed_onboarding]);
+
   const [publicRooms, setPublicRooms] = useState<any[]>([]);
   const [loadingRooms, setLoadingRooms] = useState(true);
 
@@ -409,9 +420,9 @@ export function LobbyPage() {
           <div className="flex items-center gap-3">
             <button
               onClick={() => setShowOnboarding(true)}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-mono font-bold uppercase tracking-wider text-dw-fire bg-dw-fire/10 border border-dw-fire/30 hover:bg-dw-fire/20 transition-all active:scale-95"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-mono font-bold uppercase tracking-wider text-[#FF6B2B] bg-[#FF6B2B]/10 border border-[#FF6B2B]/30 hover:bg-[#FF6B2B]/20 transition-all active:scale-95"
             >
-              <HelpCircle className="w-4 h-4 text-dw-fire" />
+              <HelpCircle className="w-4 h-4 text-[#FF6B2B]" />
               <span className="hidden sm:inline">Briefing</span>
             </button>
             <button
@@ -460,72 +471,95 @@ export function LobbyPage() {
           </p>
         </motion.div>
 
-        {/* ─── Action Cards ─── */}
-        <div className="grid md:grid-cols-2 gap-5 max-w-2xl mx-auto mb-12">
-          {/* Create Room */}
-          <motion.button
+        {/* ─── Action Cards (Symmetrical Host & Join) ─── */}
+        <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto mb-14 items-stretch">
+          {/* Host a War Card */}
+          <motion.div
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            onClick={() => setShowCreate(true)}
-            className="p-8 rounded-2xl text-left group transition-all duration-200 active:scale-98"
+            className="flex flex-col justify-between h-full min-h-[360px] p-8 rounded-2xl relative overflow-hidden group transition-all duration-200"
             style={{
               background: '#0F1520',
-              border: '1px solid rgba(255,255,255,0.07)',
+              border: '1px solid rgba(255,255,255,0.08)',
             }}
-            whileHover={{ borderColor: 'rgba(255,107,43,0.4)', scale: 1.02 }}
+            whileHover={{ borderColor: 'rgba(255,107,43,0.5)', y: -2 }}
           >
-            <div
-              className="w-14 h-14 rounded-xl flex items-center justify-center mb-5"
-              style={{ background: 'rgba(255,107,43,0.1)', border: '1px solid rgba(255,107,43,0.2)' }}
-            >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FF6B2B" strokeWidth="2">
-                <path d="M12 5v14M5 12h14" />
-              </svg>
-            </div>
-            <h2 className="font-heading text-xl font-bold text-white mb-1">Host a War</h2>
-            <p className="text-sm" style={{ color: '#8A95A8' }}>
-              Create a room, pick your edition, and set the rules.
-            </p>
-            <div
-              className="mt-5 inline-flex items-center gap-2 text-sm font-bold uppercase tracking-wider transition-colors"
-              style={{ color: '#FF6B2B' }}
-            >
-              Create Room
-              <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                <path d="M5 12h14M12 5l7 7-7 7" />
-              </svg>
-            </div>
-          </motion.button>
+            <div>
+              <div className="flex items-center justify-between mb-5">
+                <div
+                  className="w-14 h-14 rounded-xl flex items-center justify-center shrink-0"
+                  style={{ background: 'rgba(255,107,43,0.12)', border: '1px solid rgba(255,107,43,0.25)' }}
+                >
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#FF6B2B" strokeWidth="2.2">
+                    <path d="M12 5v14M5 12h14" />
+                  </svg>
+                </div>
+                <span className="text-[10px] font-mono font-bold uppercase tracking-widest px-2.5 py-1 rounded bg-[#FF6B2B]/10 border border-[#FF6B2B]/30 text-[#FF6B2B]">
+                  COMMANDER
+                </span>
+              </div>
 
-          {/* Join Room */}
+              <h2 className="font-heading text-2xl font-bold text-white mb-2 tracking-wide">Host a War</h2>
+              <p className="text-sm leading-relaxed mb-6" style={{ color: '#8A95A8' }}>
+                Launch a custom arena, select tournament edition, set starting CP budgets, and invite managers.
+              </p>
+            </div>
+
+            <div className="pt-4 border-t border-white/5">
+              <button
+                onClick={() => setShowCreate(true)}
+                className="w-full py-3.5 px-6 rounded-xl font-heading font-bold text-sm uppercase tracking-widest bg-[#FF6B2B] hover:bg-[#E55A1F] text-white shadow-lg shadow-[#FF6B2B]/20 flex items-center justify-center gap-2 transition-all active:scale-98 cursor-pointer"
+              >
+                Create Room
+                <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                  <path d="M5 12h14M12 5l7 7-7 7" />
+                </svg>
+              </button>
+            </div>
+          </motion.div>
+
+          {/* Join a Room Card */}
           <motion.div
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.15 }}
-            className="p-8 rounded-2xl"
-            style={{ background: '#0F1520', border: '1px solid rgba(255,255,255,0.07)' }}
+            className="flex flex-col justify-between h-full min-h-[360px] p-8 rounded-2xl relative overflow-hidden group transition-all duration-200"
+            style={{
+              background: '#0F1520',
+              border: '1px solid rgba(255,255,255,0.08)',
+            }}
+            whileHover={{ borderColor: 'rgba(61,142,255,0.5)', y: -2 }}
           >
-            <div
-              className="w-14 h-14 rounded-xl flex items-center justify-center mb-5"
-              style={{ background: 'rgba(61,142,255,0.1)', border: '1px solid rgba(61,142,255,0.2)' }}
-            >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#3D8EFF" strokeWidth="2">
-                <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3" />
-              </svg>
+            <div>
+              <div className="flex items-center justify-between mb-5">
+                <div
+                  className="w-14 h-14 rounded-xl flex items-center justify-center shrink-0"
+                  style={{ background: 'rgba(61,142,255,0.12)', border: '1px solid rgba(61,142,255,0.25)' }}
+                >
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#3D8EFF" strokeWidth="2.2">
+                    <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3" />
+                  </svg>
+                </div>
+                <span className="text-[10px] font-mono font-bold uppercase tracking-widest px-2.5 py-1 rounded bg-[#3D8EFF]/10 border border-[#3D8EFF]/30 text-[#3D8EFF]">
+                  OPERATOR
+                </span>
+              </div>
+
+              <h2 className="font-heading text-2xl font-bold text-white mb-2 tracking-wide">Join Battle</h2>
+              <p className="text-sm leading-relaxed mb-4" style={{ color: '#8A95A8' }}>
+                Enter your 6-character tactical access code to jump straight into an existing war room.
+              </p>
             </div>
-            <h2 className="font-heading text-xl font-bold text-white mb-1">Join a Room</h2>
-            <p className="text-sm mb-5" style={{ color: '#8A95A8' }}>
-              Enter a 6-character code to jump in.
-            </p>
-            <form onSubmit={handleJoin} className="space-y-3">
+
+            <form onSubmit={handleJoin} className="space-y-3 pt-4 border-t border-white/5">
               <input
                 type="text"
                 value={joinCode}
                 onChange={e => { setJoinCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '')); setJoinError(''); }}
                 placeholder="ENTER CODE"
                 maxLength={6}
-                className="w-full py-3 px-4 rounded-xl text-center font-display text-xl tracking-[0.4em] uppercase transition-all"
+                className="w-full py-3 px-4 rounded-xl text-center font-display text-lg tracking-[0.35em] uppercase transition-all"
                 style={{
                   background: '#080C12',
                   border: '1px solid rgba(255,255,255,0.12)',
@@ -535,13 +569,15 @@ export function LobbyPage() {
                 onFocus={e => { e.target.style.borderColor = '#3D8EFF'; e.target.style.boxShadow = '0 0 0 3px rgba(61,142,255,0.15)'; }}
                 onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.12)'; e.target.style.boxShadow = 'none'; }}
               />
-              {joinError && <div className="text-xs font-bold text-center" style={{ color: '#FF3B3B' }}>{joinError}</div>}
+              {joinError && <div className="text-xs font-bold text-center text-[#FF3B3B]">{joinError}</div>}
               <button
                 type="submit"
-                className="w-full py-3 rounded-xl font-heading font-bold text-sm uppercase tracking-widest transition-all"
-                style={{ background: '#161E2E', color: '#8A95A8', border: '1px solid rgba(255,255,255,0.1)' }}
+                className="w-full py-3.5 px-6 rounded-xl font-heading font-bold text-sm uppercase tracking-widest bg-[#161E2E] hover:bg-[#1E293B] text-white border border-[#3D8EFF]/40 hover:border-[#3D8EFF] shadow-lg shadow-[#3D8EFF]/10 flex items-center justify-center gap-2 transition-all active:scale-98 cursor-pointer"
               >
                 Join Room
+                <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                  <path d="M5 12h14M12 5l7 7-7 7" />
+                </svg>
               </button>
             </form>
           </motion.div>

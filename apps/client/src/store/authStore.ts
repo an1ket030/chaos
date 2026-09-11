@@ -12,6 +12,7 @@ export interface User {
   best_squad_rating: number;
   favorite_formation: string | null;
   chaos_cards_received: number;
+  has_completed_onboarding?: boolean;
   created_at: string;
 }
 

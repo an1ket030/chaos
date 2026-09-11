@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { registerUser, loginUser, refreshAccessToken, getUserById, logoutUser } from './auth.service';
+import { registerUser, loginUser, refreshAccessToken, getUserById, logoutUser, completeOnboarding } from './auth.service';
 import { requireAuth, type AuthRequest } from './auth.middleware';
 
 export const authRouter = Router();
@@ -67,3 +67,13 @@ authRouter.get('/me', requireAuth, async (req: AuthRequest, res) => {
     res.status(500).json({ error: 'Server error' });
   }
 });
+
+authRouter.post('/complete-onboarding', requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const user = await completeOnboarding(req.userId!);
+    res.json({ success: true, user });
+  } catch {
+    res.status(500).json({ error: 'Failed to complete onboarding' });
+  }
+});
+

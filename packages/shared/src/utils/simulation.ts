@@ -25,15 +25,26 @@ function defenseScore(team: SimTeam): number {
   const defenders = team.players.filter((p) =>
     ['GK', 'LB', 'RB', 'CB', 'CDM'].includes(p.position)
   );
-  if (defenders.length === 0) return 50;
-  const avg = defenders.reduce((sum, p) => {
-    return sum +
-      p.defending * 0.40 +
-      p.physical * 0.30 +
-      p.pace * 0.20 +
-      (p.position === 'GK' ? 80 : p.defending) * 0.10;
-  }, 0) / defenders.length;
-  return Math.round(avg);
+  const hasRealGk = team.players.some((p) => p.position === 'GK');
+
+  let baseDef = 50;
+  if (defenders.length > 0) {
+    baseDef = defenders.reduce((sum, p) => {
+      const isGk = p.position === 'GK';
+      return sum +
+        p.defending * 0.40 +
+        p.physical * 0.25 +
+        p.pace * 0.15 +
+        (isGk ? 85 : p.defending) * 0.20;
+    }, 0) / defenders.length;
+  }
+
+  // Severe 50% defense penalty if no genuine goalkeeper is in goal
+  if (!hasRealGk) {
+    baseDef *= 0.50;
+  }
+
+  return Math.round(baseDef);
 }
 
 // ============================================================
@@ -43,9 +54,17 @@ function teamStrength(team: SimTeam): number {
   const atk = attackScore(team);
   const def = defenseScore(team);
   const captain = team.players.find((p) => p.id === team.captain);
-  const captainBonus = captain ? (captain.rating / 99) * 3 : 0;
-  const chemBonus = (team.chemistry / 100) * 5;
-  return atk * 0.55 + def * 0.45 + chemBonus + captainBonus;
+  const captainBonus = captain ? (captain.rating / 99) * 4 : 0;
+
+  // Chemistry scaling: 0 chem is 15% penalty, 50 chem is neutral (1.0), 100 chem is 15% boost
+  const chemMultiplier = 0.85 + (team.chemistry / 100) * 0.30;
+
+  const avgRating = team.players.length > 0
+    ? team.players.reduce((sum, p) => sum + p.rating, 0) / team.players.length
+    : 70;
+
+  const rawStrength = (atk * 0.45 + def * 0.45 + avgRating * 0.10 + captainBonus);
+  return Math.round(rawStrength * chemMultiplier);
 }
 
 // ============================================================
@@ -124,8 +143,8 @@ function generateEvents(
       playerId: scorer.id,
       playerName: scorer.name,
       detail: assist
-        ? `⚽ GOAL! ${scorer.name} (assist: ${assist.name}) — ${teamA.username} leads ${scoreA.score}-${scoreB.score}`
-        : `⚽ GOAL! ${scorer.name} — ${teamA.username} leads ${scoreA.score}-${scoreB.score}`,
+        ? `⚽ GOAL! ${scorer.name} (assist: ${assist.name}) — ${teamA.username}'s XI leads ${scoreA.score}-${scoreB.score}`
+        : `⚽ GOAL! ${scorer.name} — ${teamA.username}'s XI leads ${scoreA.score}-${scoreB.score}`,
     });
   }
 
@@ -146,8 +165,8 @@ function generateEvents(
       playerId: scorer.id,
       playerName: scorer.name,
       detail: assist
-        ? `⚽ GOAL! ${scorer.name} (assist: ${assist.name}) — ${teamB.username} leads ${scoreB.score}-${scoreA.score}`
-        : `⚽ GOAL! ${scorer.name} — ${teamB.username} leads ${scoreB.score}-${scoreA.score}`,
+        ? `⚽ GOAL! ${scorer.name} (assist: ${assist.name}) — ${teamB.username}'s XI leads ${scoreB.score}-${scoreA.score}`
+        : `⚽ GOAL! ${scorer.name} — ${teamB.username}'s XI leads ${scoreB.score}-${scoreA.score}`,
     });
   }
 
@@ -161,7 +180,7 @@ function generateEvents(
         teamId: teamA.userId,
         playerId: player.id,
         playerName: player.name,
-        detail: `🟨 Yellow card — ${player.name} (${teamA.username})`,
+        detail: `🟨 Yellow card — ${player.name} (${teamA.username}'s XI)`,
       });
     }
   }
@@ -174,7 +193,7 @@ function generateEvents(
         teamId: teamB.userId,
         playerId: player.id,
         playerName: player.name,
-        detail: `🟨 Yellow card — ${player.name} (${teamB.username})`,
+        detail: `🟨 Yellow card — ${player.name} (${teamB.username}'s XI)`,
       });
     }
   }
@@ -191,7 +210,7 @@ function generateEvents(
       teamId: isTeamA ? teamA.userId : teamB.userId,
       playerId: victim.id,
       playerName: victim.name,
-      detail: `🟥 Red card — ${victim.name} (${isTeamA ? teamA.username : teamB.username}) sent off!`,
+      detail: `🟥 Red card — ${victim.name} (${isTeamA ? teamA.username : teamB.username}'s XI) sent off!`,
     });
   }
 
@@ -203,7 +222,7 @@ function generateEvents(
       teamId: teamA.userId,
       playerId: gkA.id,
       playerName: gkA.name,
-      detail: `🧤 Great save by ${gkA.name}!`,
+      detail: `🧤 Great save by ${gkA.name} (${teamA.username}'s XI)!`,
     });
   }
   if (gkB && goalsA > 0) {
@@ -213,7 +232,7 @@ function generateEvents(
       teamId: teamB.userId,
       playerId: gkB.id,
       playerName: gkB.name,
-      detail: `🧤 Great save by ${gkB.name}!`,
+      detail: `🧤 Great save by ${gkB.name} (${teamB.username}'s XI)!`,
     });
   }
 
@@ -270,25 +289,25 @@ export function simulateMatch(teamA: SimTeam, teamB: SimTeam): MatchResult {
   const strengthA = teamStrength(teamA);
   const strengthB = teamStrength(teamB);
 
-  // Expected goals
-  let lambdaA = (strengthA / strengthB) * 1.3;
-  let lambdaB = (strengthB / strengthA) * 1.3;
-  lambdaA = Math.min(Math.max(lambdaA, 0.3), 3.5);
-  lambdaB = Math.min(Math.max(lambdaB, 0.3), 3.5);
+  // Realistic football goal expectancy based on power differential
+  // Baseline average goals in professional football ~1.35 per side
+  const diff = (strengthA - strengthB) / 25; // e.g. 10 rating lead => diff 0.40
+  let lambdaA = 1.35 * Math.exp(diff / 2);
+  let lambdaB = 1.35 * Math.exp(-diff / 2);
 
-  let goalsA = poissonRandom(lambdaA);
-  let goalsB = poissonRandom(lambdaB);
+  lambdaA = Math.min(Math.max(lambdaA, 0.25), 4.5);
+  lambdaB = Math.min(Math.max(lambdaB, 0.25), 4.5);
 
-  // 15% upset multiplier
-  if (strengthA > strengthB && Math.random() < 0.15) goalsB += 1;
-  if (strengthB > strengthA && Math.random() < 0.15) goalsA += 1;
+  const goalsA = poissonRandom(lambdaA);
+  const goalsB = poissonRandom(lambdaB);
 
   const events = generateEvents(teamA, teamB, goalsA, goalsB);
   const potm = calculatePOTM(events, teamA, teamB);
 
-  const shotsA = goalsA + Math.floor(Math.random() * 6);
-  const shotsB = goalsB + Math.floor(Math.random() * 6);
-  const possA = Math.floor(40 + Math.random() * 20);
+  const shotsA = goalsA + Math.floor(Math.random() * 5) + Math.round(strengthA / 18);
+  const shotsB = goalsB + Math.floor(Math.random() * 5) + Math.round(strengthB / 18);
+  const rawPossA = 50 + (strengthA - strengthB) * 0.8 + (Math.random() * 8 - 4);
+  const possA = Math.min(Math.max(Math.round(rawPossA), 28), 72);
 
   return {
     matchId: `${teamA.userId}_vs_${teamB.userId}_${Date.now()}`,

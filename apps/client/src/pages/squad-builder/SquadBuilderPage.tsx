@@ -85,6 +85,20 @@ export function SquadBuilderPage() {
   const [captain, setCaptain] = useState<string>('');
   const [viceCaptain, setViceCaptain] = useState<string>('');
   const [isReady, setIsReady] = useState(false);
+  const [matchCountdown, setMatchCountdown] = useState<number | null>(null);
+
+  // Synchronized countdown timer before match simulation
+  useEffect(() => {
+    if (matchCountdown === null) return;
+    if (matchCountdown === 0) {
+      navigate(`/room/${code?.toUpperCase()}/simulation`);
+      return;
+    }
+    const timer = setTimeout(() => {
+      setMatchCountdown((prev) => (prev !== null && prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [matchCountdown, code, navigate]);
 
   // Initial load: fetch room state from REST and check status
   useEffect(() => {
@@ -127,14 +141,16 @@ export function SquadBuilderPage() {
       if (!state) return;
       setRoom(state);
       if (state.status === 'SIMULATION') {
-        navigate(`/room/${upperCode}/simulation`);
+        if (matchCountdown === null) {
+          navigate(`/room/${upperCode}/simulation`);
+        }
       } else if (state.status === 'RESULTS') {
         navigate(`/room/${upperCode}/results`);
       }
     };
 
     const onSquadAllReady = () => {
-      navigate(`/room/${upperCode}/simulation`);
+      setMatchCountdown(3);
     };
 
     const onSimulationStart = () => {
@@ -150,11 +166,11 @@ export function SquadBuilderPage() {
       socket.off('squad:all_ready', onSquadAllReady);
       socket.off('simulation:start', onSimulationStart);
     };
-  }, [code, user, socket, navigate, setRoom]);
+  }, [code, user, socket, navigate, setRoom, matchCountdown]);
 
   // Polling fallback while waiting for other players
   useEffect(() => {
-    if (!isReady || !code) return;
+    if (!isReady || !code || matchCountdown !== null) return;
     const upperCode = code.toUpperCase();
 
     const interval = setInterval(async () => {
@@ -171,7 +187,7 @@ export function SquadBuilderPage() {
     }, 1200);
 
     return () => clearInterval(interval);
-  }, [isReady, code, navigate]);
+  }, [isReady, code, navigate, matchCountdown]);
 
   const me = room?.players.find((p) => p.userId === user?.id);
   const acquiredPlayers = useMemo(() => {
@@ -302,7 +318,7 @@ export function SquadBuilderPage() {
     socket.emit('squad:finalize', payload as any, (res: any) => {
       if (res?.success) {
         if (res.allReady) {
-          navigate(`/room/${code?.toUpperCase()}/simulation`);
+          setMatchCountdown(3);
         }
       } else {
         setIsReady(false);
@@ -367,120 +383,122 @@ export function SquadBuilderPage() {
       <div className="flex-1 flex gap-6 p-6 overflow-hidden">
         {/* Pitch Area */}
         <div className="flex-1 flex flex-col bg-[#0F1520] rounded-2xl border border-white/[0.07] p-4 relative overflow-hidden shadow-2xl">
-          <div className="flex items-center justify-between mb-3 px-2">
+          <div className="flex items-center justify-between mb-2 px-2 shrink-0">
             <div>
-              <h2 className="font-heading font-black text-2xl tracking-wide text-white uppercase">Starting XI</h2>
-              <p className="text-xs text-[#8A95A8]">Click a slot on the pitch then choose a player from your bench</p>
+              <h2 className="font-heading font-black text-2xl tracking-wide text-white uppercase">Tactical Pitch</h2>
+              <p className="text-xs text-[#8A95A8]">Proportional vertical board · Click a pitch slot to position squad members</p>
             </div>
             <div className="text-right text-xs text-[#8A95A8]">
               <span className="font-bold text-white">{Object.keys(lineup).length}</span> / 11 Players Placed
             </div>
           </div>
 
-          {/* Football Pitch Container */}
-          <div className="flex-1 relative rounded-xl border border-white/10 overflow-hidden pitch-surface shadow-inner">
-            {/* Pitch Markings */}
-            <div className="absolute inset-x-0 top-1/2 h-[1px] bg-white/20 -translate-y-1/2" />
-            <div className="absolute left-1/2 top-1/2 w-28 h-28 border border-white/20 rounded-full -translate-x-1/2 -translate-y-1/2" />
-            <div className="absolute left-1/2 top-1/2 w-2 h-2 bg-white/40 rounded-full -translate-x-1/2 -translate-y-1/2" />
+          {/* Proportional Vertical Football Pitch Container (3:4 Aspect Ratio) */}
+          <div className="flex-1 flex items-center justify-center p-1 min-h-0 overflow-hidden">
+            <div className="h-full aspect-[3/4] max-w-full relative rounded-xl border-2 border-white/20 overflow-hidden pitch-surface shadow-2xl">
+              {/* Pitch Markings */}
+              <div className="absolute inset-x-0 top-1/2 h-[1px] bg-white/25 -translate-y-1/2" />
+              <div className="absolute left-1/2 top-1/2 w-28 h-28 border border-white/25 rounded-full -translate-x-1/2 -translate-y-1/2" />
+              <div className="absolute left-1/2 top-1/2 w-2 h-2 bg-white/50 rounded-full -translate-x-1/2 -translate-y-1/2" />
 
-            {/* Goal Areas */}
-            <div className="absolute left-1/2 top-0 w-44 h-16 border-b border-x border-white/20 -translate-x-1/2 rounded-b-md" />
-            <div className="absolute left-1/2 bottom-0 w-44 h-16 border-t border-x border-white/20 -translate-x-1/2 rounded-t-md" />
+              {/* Goal Areas */}
+              <div className="absolute left-1/2 top-0 w-44 h-16 border-b border-x border-white/25 -translate-x-1/2 rounded-b-md" />
+              <div className="absolute left-1/2 bottom-0 w-44 h-16 border-t border-x border-white/25 -translate-x-1/2 rounded-t-md" />
 
-            {/* Subtle Pitch Striping Overlay */}
-            <div
-              className="absolute inset-0 pointer-events-none opacity-25"
-              style={{
-                backgroundImage: 'repeating-linear-gradient(180deg, transparent, transparent 36px, rgba(255,255,255,0.05) 36px, rgba(255,255,255,0.05) 72px)'
-              }}
-            />
+              {/* Subtle Pitch Striping Overlay */}
+              <div
+                className="absolute inset-0 pointer-events-none opacity-20"
+                style={{
+                  backgroundImage: 'repeating-linear-gradient(180deg, transparent, transparent 36px, rgba(255,255,255,0.05) 36px, rgba(255,255,255,0.05) 72px)'
+                }}
+              />
 
-            {/* Position Slots */}
-            {layout.map((slot, idx) => {
-              const pid = lineup[idx];
-              const player = pid ? acquiredPlayers.find(p => p.id === pid) : null;
-              const isSelected = selectedSlot === idx;
-              const isCap = captain === pid;
-              const isVc = viceCaptain === pid;
+              {/* Position Slots */}
+              {layout.map((slot, idx) => {
+                const pid = lineup[idx];
+                const player = pid ? acquiredPlayers.find(p => p.id === pid) : null;
+                const isSelected = selectedSlot === idx;
+                const isCap = captain === pid;
+                const isVc = viceCaptain === pid;
 
-              return (
-                <div
-                  key={idx}
-                  onClick={() => handleSlotClick(idx)}
-                  className={`absolute -translate-x-1/2 -translate-y-1/2 w-20 h-24 rounded-xl cursor-pointer transition-all duration-200 flex flex-col items-center justify-center select-none group
-                    ${isSelected
-                      ? 'border-2 border-[#FF6B2B] shadow-[0_0_25px_rgba(255,107,43,0.5)] scale-105 z-20 bg-[#161E2E]/95'
-                      : player
-                        ? 'border border-white/20 bg-[#0F1520]/90 hover:border-white/40 hover:scale-105 z-10'
-                        : 'border-2 border-dashed border-white/20 bg-black/40 hover:border-[#FF6B2B]/60 hover:bg-[#FF6B2B]/5 z-0'
-                    }
-                  `}
-                  style={{ left: `${slot.x}%`, top: `${slot.y}%` }}
-                >
-                  {player ? (
-                    <>
-                      {/* Role & Position Badges */}
-                      <div className="absolute -top-2 flex items-center gap-1 z-30">
-                        <span className="text-[9px] font-heading font-black px-1.5 py-0.5 rounded bg-[#FF6B2B] text-white shadow">
+                return (
+                  <div
+                    key={idx}
+                    onClick={() => handleSlotClick(idx)}
+                    className={`absolute -translate-x-1/2 -translate-y-1/2 w-16 h-20 md:w-20 md:h-24 rounded-xl cursor-pointer transition-all duration-200 flex flex-col items-center justify-center select-none group
+                      ${isSelected
+                        ? 'border-2 border-[#FF6B2B] shadow-[0_0_25px_rgba(255,107,43,0.5)] scale-105 z-20 bg-[#161E2E]/95'
+                        : player
+                          ? 'border border-white/20 bg-[#0F1520]/90 hover:border-white/40 hover:scale-105 z-10'
+                          : 'border-2 border-dashed border-white/20 bg-black/40 hover:border-[#FF6B2B]/60 hover:bg-[#FF6B2B]/5 z-0'
+                      }
+                    `}
+                    style={{ left: `${slot.x}%`, top: `${slot.y}%` }}
+                  >
+                    {player ? (
+                      <>
+                        {/* Role & Position Badges */}
+                        <div className="absolute -top-2 flex items-center gap-1 z-30">
+                          <span className="text-[9px] font-heading font-black px-1.5 py-0.5 rounded bg-[#FF6B2B] text-white shadow">
+                            {slot.position}
+                          </span>
+                          {isCap && (
+                            <span className="text-[9px] font-heading font-black px-1 py-0.5 rounded bg-[#E8B84B] text-black shadow">
+                              C
+                            </span>
+                          )}
+                          {isVc && !isCap && (
+                            <span className="text-[9px] font-heading font-black px-1 py-0.5 rounded bg-[#8A95A8] text-white shadow">
+                              VC
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Player Image */}
+                        <img
+                          src={player.imageUrl}
+                          alt={player.name}
+                          className="w-9 h-9 md:w-10 md:h-10 rounded-full object-cover object-top border border-white/20 shadow-md mb-0.5"
+                        />
+
+                        {/* Player Surname */}
+                        <div className="text-[10px] md:text-[11px] font-bold text-white truncate w-full text-center px-1 leading-tight">
+                          {player.name.split(' ').pop()}
+                        </div>
+
+                        {/* Rating */}
+                        <div
+                          className="font-num font-black text-[10px] md:text-[11px]"
+                          style={{ color: player.position === slot.position ? '#2ECC71' : '#E8B84B' }}
+                        >
+                          {player.rating}
+                        </div>
+
+                        {/* Remove Button */}
+                        <button
+                          onClick={(e) => removePlayerFromSlot(idx, e)}
+                          className="absolute -top-2 -right-2 bg-[#FF3B3B] hover:bg-red-600 text-white w-5 h-5 rounded-full text-xs font-bold flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow"
+                          title="Remove to bench"
+                        >
+                          ×
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-xs font-heading font-black text-white/60 tracking-wider">
                           {slot.position}
                         </span>
-                        {isCap && (
-                          <span className="text-[9px] font-heading font-black px-1 py-0.5 rounded bg-[#E8B84B] text-black shadow">
-                            C
-                          </span>
-                        )}
-                        {isVc && !isCap && (
-                          <span className="text-[9px] font-heading font-black px-1 py-0.5 rounded bg-[#8A95A8] text-white shadow">
-                            VC
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Player Image */}
-                      <img
-                        src={player.imageUrl}
-                        alt={player.name}
-                        className="w-10 h-10 rounded-full object-cover object-top border border-white/20 shadow-md mb-1"
-                      />
-
-                      {/* Player Surname */}
-                      <div className="text-[11px] font-bold text-white truncate w-full text-center px-1 leading-tight">
-                        {player.name.split(' ').pop()}
-                      </div>
-
-                      {/* Rating */}
-                      <div
-                        className="font-num font-black text-[11px]"
-                        style={{ color: player.position === slot.position ? '#2ECC71' : '#E8B84B' }}
-                      >
-                        {player.rating}
-                      </div>
-
-                      {/* Remove Button */}
-                      <button
-                        onClick={(e) => removePlayerFromSlot(idx, e)}
-                        className="absolute -top-2 -right-2 bg-[#FF3B3B] hover:bg-red-600 text-white w-5 h-5 rounded-full text-xs font-bold flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow"
-                        title="Remove to bench"
-                      >
-                        ×
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <span className="text-xs font-heading font-black text-white/60 tracking-wider">
-                        {slot.position}
-                      </span>
-                      <span className="text-xl text-white/30 font-light mt-0.5">+</span>
-                    </>
-                  )}
-                </div>
-              );
-            })}
+                        <span className="text-xl text-white/30 font-light mt-0.5">+</span>
+                      </>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
 
           {/* Confirm Button Bar */}
-          <div className="mt-4 pt-2 border-t border-white/[0.07]">
+          <div className="mt-3 pt-2 border-t border-white/[0.07] shrink-0">
             <Button
               size="lg"
               className="w-full h-14"
@@ -491,7 +509,7 @@ export function SquadBuilderPage() {
                 <div className="flex items-center justify-center gap-3">
                   <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   <span className="font-heading font-bold text-sm tracking-wider uppercase">
-                    SQUAD LOCKED · WAITING FOR OPPONENT...
+                    SQUAD LOCKED · WAITING FOR RIVAL MANAGERS...
                   </span>
                 </div>
               ) : (
@@ -623,6 +641,46 @@ export function SquadBuilderPage() {
           </div>
         </div>
       </div>
+
+      {/* Synchronized Kickoff Countdown Overlay */}
+      <AnimatePresence>
+        {matchCountdown !== null && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#080C12]/95"
+          >
+            <div className="w-full max-w-md p-8 rounded-2xl bg-[#0F1520] border-2 border-[#FF6B2B] shadow-2xl text-center relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-[#FF6B2B]" />
+              <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-[#FF6B2B]" />
+              <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-[#FF6B2B]" />
+              <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-[#FF6B2B]" />
+
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded bg-[#FF6B2B]/10 border border-[#FF6B2B]/30 text-[#FF6B2B] text-xs font-mono font-bold uppercase tracking-widest mb-4">
+                TACTICAL LOCK ENGAGED
+              </div>
+
+              <h2 className="font-display text-4xl text-white tracking-wide mb-2">
+                ALL SQUADS CONFIRMED
+              </h2>
+              <p className="text-sm font-mono text-[#8A95A8] uppercase tracking-wider mb-6">
+                MATCH SIMULATION STARTING IN
+              </p>
+
+              <motion.div
+                key={matchCountdown}
+                initial={{ scale: 1.5, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ type: 'spring', damping: 15 }}
+                className="font-display text-8xl font-black text-[#FF6B2B] drop-shadow-[0_0_25px_rgba(255,107,43,0.7)]"
+              >
+                {matchCountdown > 0 ? matchCountdown : 'KICKOFF!'}
+              </motion.div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

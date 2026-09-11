@@ -16,6 +16,7 @@ export interface UserRecord {
   best_squad_rating: number;
   favorite_formation: string | null;
   chaos_cards_received: number;
+  has_completed_onboarding: boolean;
   created_at: string;
 }
 
@@ -37,12 +38,14 @@ export async function registerUser(
   if (existing) throw new Error('Username or email already in use');
 
   const passwordHash = await bcrypt.hash(password, 12);
+  const defaultAvatar = `https://api.dicebear.com/7.x/bottts-neutral/svg?seed=${encodeURIComponent(username)}`;
   const user = await queryOne<UserRecord>(
-    `INSERT INTO users (username, email, password_hash)
-     VALUES ($1, $2, $3)
+    `INSERT INTO users (username, email, password_hash, avatar_url)
+     VALUES ($1, $2, $3, $4)
      RETURNING id, username, email, avatar_url, elo_rating, games_played, games_won,
-               total_cp_spent, best_squad_rating, favorite_formation, chaos_cards_received, created_at`,
-    [username, email, passwordHash],
+               total_cp_spent, best_squad_rating, favorite_formation, chaos_cards_received,
+               has_completed_onboarding, created_at`,
+    [username, email, passwordHash, defaultAvatar],
   );
   if (!user) throw new Error('Failed to create user');
   const tokens = await generateTokens(user.id);
@@ -55,7 +58,8 @@ export async function loginUser(
 ): Promise<{ user: UserRecord; tokens: TokenPair }> {
   const row = await queryOne<UserRecord & { password_hash: string }>(
     `SELECT id, username, email, password_hash, avatar_url, elo_rating, games_played, games_won,
-            total_cp_spent, best_squad_rating, favorite_formation, chaos_cards_received, created_at
+            total_cp_spent, best_squad_rating, favorite_formation, chaos_cards_received,
+            has_completed_onboarding, created_at
      FROM users WHERE email = $1`,
     [email],
   );
@@ -92,9 +96,22 @@ export async function refreshAccessToken(refreshToken: string): Promise<TokenPai
 export async function getUserById(id: string): Promise<UserRecord | null> {
   return queryOne<UserRecord>(
     `SELECT id, username, email, avatar_url, elo_rating, games_played, games_won,
-            total_cp_spent, best_squad_rating, favorite_formation, chaos_cards_received, created_at
+            total_cp_spent, best_squad_rating, favorite_formation, chaos_cards_received,
+            has_completed_onboarding, created_at
      FROM users WHERE id = $1`,
     [id],
+  );
+}
+
+export async function completeOnboarding(userId: string): Promise<UserRecord | null> {
+  return queryOne<UserRecord>(
+    `UPDATE users
+     SET has_completed_onboarding = true, updated_at = NOW()
+     WHERE id = $1
+     RETURNING id, username, email, avatar_url, elo_rating, games_played, games_won,
+               total_cp_spent, best_squad_rating, favorite_formation, chaos_cards_received,
+               has_completed_onboarding, created_at`,
+    [userId],
   );
 }
 

@@ -168,11 +168,11 @@ export function SimulationPage() {
             DRAFTWAR
           </span>
           <span className="text-xs uppercase tracking-widest px-2.5 py-1 rounded bg-white/[0.06] border border-white/10 text-[#8A95A8]">
-            MATCH SIMULATION
+            {teamA && teamB ? `${teamA.username}'s XI vs ${teamB.username}'s XI` : 'MATCH SIMULATION'}
           </span>
         </div>
         <div className="font-num font-bold text-xs px-3 py-1 rounded-full bg-[#9B5DE5]/10 border border-[#9B5DE5]/30 text-[#9B5DE5] uppercase tracking-wider">
-          CHAOS ENGINE ACTIVE
+          TACTICAL ENGINE ACTIVE
         </div>
       </header>
 
@@ -191,8 +191,8 @@ export function SimulationPage() {
               transition={{ duration: 0.3 }}
             >
               <Avatar username={teamA?.username ?? 'Team A'} url={teamA?.avatarUrl} size="lg" />
-              <div className="font-heading font-bold text-lg text-white uppercase mt-3 mb-1 truncate max-w-[200px] text-center">
-                {teamA?.username ?? 'Team A'}
+              <div className="font-heading font-bold text-lg text-white uppercase mt-3 mb-1 truncate max-w-[220px] text-center">
+                {teamA?.username ? `${teamA.username}'s XI` : 'Team A'}
               </div>
               <motion.div
                 key={scoreA}
@@ -228,8 +228,8 @@ export function SimulationPage() {
               transition={{ duration: 0.3 }}
             >
               <Avatar username={teamB?.username ?? 'Team B'} url={teamB?.avatarUrl} size="lg" />
-              <div className="font-heading font-bold text-lg text-white uppercase mt-3 mb-1 truncate max-w-[200px] text-center">
-                {teamB?.username ?? 'Team B'}
+              <div className="font-heading font-bold text-lg text-white uppercase mt-3 mb-1 truncate max-w-[220px] text-center">
+                {teamB?.username ? `${teamB.username}'s XI` : 'Team B'}
               </div>
               <motion.div
                 key={scoreB}
@@ -254,14 +254,14 @@ export function SimulationPage() {
               className="text-center py-6 px-8 rounded-2xl bg-[#E8B84B]/10 border-2 border-[#E8B84B] shadow-[0_0_40px_rgba(232,184,75,0.2)]"
             >
               <div className="text-xs font-heading font-bold uppercase tracking-widest text-[#E8B84B] mb-1">
-                Tournament Winner
+                Match Winner
               </div>
               <div className="font-heading font-black text-5xl text-white tracking-wide">
-                {finalResult.winnerUsername}
+                {finalResult.winnerUsername ? `${finalResult.winnerUsername}'s XI` : 'Draw'}
               </div>
               <div className="text-xs text-[#8A95A8] mt-2 flex items-center justify-center gap-2">
                 <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                <span>Transitioning to final match results...</span>
+                <span>Transitioning to final match accolades...</span>
               </div>
             </motion.div>
           )}
