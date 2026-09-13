@@ -409,12 +409,13 @@ export function LobbyPage() {
         className="sticky top-0 z-40 flex items-center justify-between px-8 py-4"
         style={{ background: 'rgba(8,12,18,0.8)', backdropFilter: 'blur(16px)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}
       >
-        <div
-          className="font-display text-3xl tracking-wider"
+        <button
+          onClick={() => navigate('/')}
+          className="font-display text-3xl tracking-wider text-left hover:opacity-80 transition-opacity cursor-pointer"
           style={{ color: '#FF6B2B', textShadow: '0 0 16px rgba(255,107,43,0.35)' }}
         >
-          DRAFTWAR
-        </div>
+          DRAFT<span className="text-white">WAR</span>
+        </button>
 
         {user && (
           <div className="flex items-center gap-3">

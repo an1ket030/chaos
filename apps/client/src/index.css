@@ -308,6 +308,45 @@
     background-clip: text;
   }
 
+  .font-editorial { font-family: 'Playfair Display', serif; }
+  .font-syne { font-family: 'Syne', sans-serif; }
+
+  .text-stroke-white {
+    -webkit-text-stroke: 1.5px rgba(255, 255, 255, 0.35);
+    color: transparent;
+  }
+  .text-stroke-orange {
+    -webkit-text-stroke: 1.5px #FF5500;
+    color: transparent;
+  }
+  .text-stroke-ink {
+    -webkit-text-stroke: 1.5px #111620;
+    color: transparent;
+  }
+
+  .tactical-dot-matrix {
+    background-image: radial-gradient(rgba(255, 107, 43, 0.25) 1.5px, transparent 1.5px);
+    background-size: 24px 24px;
+  }
+
+  .paper-dot-matrix {
+    background-image: radial-gradient(rgba(17, 22, 32, 0.15) 1.5px, transparent 1.5px);
+    background-size: 20px 20px;
+  }
+
+  .stipple-pattern {
+    background-image: radial-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+    background-size: 12px 12px;
+  }
+
+  .editorial-shadow {
+    box-shadow: 6px 6px 0px #FF5500;
+  }
+
+  .editorial-shadow-dark {
+    box-shadow: 6px 6px 0px #111620;
+  }
+
   .bg-grid {
     background-image:
       linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
@@ -315,3 +354,4 @@
     background-size: 48px 48px;
   }
 }
+

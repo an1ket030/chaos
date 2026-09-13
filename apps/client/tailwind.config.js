@@ -43,10 +43,30 @@ export default {
         gold: '#E8B84B',
         silver: '#8A95A8',
         bronze: '#CD7F32',
+        // Editorial Paper & Ink tokens (from moodboards)
+        paper: {
+          DEFAULT: '#F4EFE6',
+          dark: '#E8E1D5',
+        },
+        ink: {
+          DEFAULT: '#111620',
+          muted: '#3D4654',
+        },
+        crimson: {
+          DEFAULT: '#B81D1D',
+          bright: '#E52B2B',
+          glow: 'rgba(184, 29, 29, 0.4)',
+        },
+        pitch: {
+          DEFAULT: '#00E599',
+          glow: 'rgba(0, 229, 153, 0.35)',
+        },
       },
       fontFamily: {
         display: ['Bebas Neue', 'sans-serif'],
         heading: ['Barlow Condensed', 'sans-serif'],
+        editorial: ['Playfair Display', 'serif'],
+        syne: ['Syne', 'sans-serif'],
         body: ['Inter', 'sans-serif'],
         mono: ['JetBrains Mono', 'monospace'],
       },

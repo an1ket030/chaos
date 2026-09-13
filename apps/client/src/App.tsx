@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { LandingPage } from './pages/landing/LandingPage';
 import { LoginPage } from './pages/auth/LoginPage';
 import { RegisterPage } from './pages/auth/RegisterPage';
 import { LobbyPage } from './pages/lobby/LobbyPage';
@@ -54,10 +55,11 @@ export default function App() {
     <SocketProvider>
       <BrowserRouter>
         <Routes>
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/lobby" element={<ProtectedRoute><LobbyPage /></ProtectedRoute>} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
 
-          <Route path="/" element={<ProtectedRoute><LobbyPage /></ProtectedRoute>} />
           <Route path="/room/:code" element={<ProtectedRoute><WaitingRoomPage /></ProtectedRoute>} />
           <Route path="/room/:code/auction" element={<ProtectedRoute><AuctionRoomPage /></ProtectedRoute>} />
           <Route path="/room/:code/squad-builder" element={<ProtectedRoute><SquadBuilderPage /></ProtectedRoute>} />

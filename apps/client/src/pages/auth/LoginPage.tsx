@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { api } from '../../lib/api';
 import { useAuthStore } from '../../store/authStore';
+import { ArrowRight, ShieldCheck, Zap } from 'lucide-react';
 
 export function LoginPage() {
   const [email, setEmail] = useState('');
@@ -21,7 +22,7 @@ export function LoginPage() {
       localStorage.setItem('accessToken', data.tokens.accessToken);
       localStorage.setItem('refreshToken', data.tokens.refreshToken);
       setUser(data.user);
-      navigate('/');
+      navigate('/lobby');
     } catch (err: any) {
       setError(err.response?.data?.error || 'Invalid credentials. Please try again.');
     } finally {
@@ -29,108 +30,170 @@ export function LoginPage() {
     }
   };
 
+  const handleQuickLogin = (quickEmail: string) => {
+    setEmail(quickEmail);
+    setPassword('password123');
+  };
+
   return (
-    <div
-      className="min-h-screen flex items-center justify-center p-4 bg-grid relative overflow-hidden"
-      style={{ background: '#080C12' }}
-    >
-      {/* Ambient glows */}
-      <div className="absolute top-0 left-1/4 w-[500px] h-[500px] rounded-full pointer-events-none"
-        style={{ background: 'radial-gradient(circle, rgba(255,107,43,0.07) 0%, transparent 70%)' }} />
-      <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] rounded-full pointer-events-none"
-        style={{ background: 'radial-gradient(circle, rgba(155,93,229,0.07) 0%, transparent 70%)' }} />
+    <div className="min-h-screen bg-[#06090E] text-[#F0F4FF] flex items-center justify-center p-4 md:p-8 relative overflow-hidden">
+      
+      {/* Background Grid */}
+      <div className="absolute inset-0 bg-grid opacity-30 pointer-events-none" />
 
+      {/* Main Editorial Card Container */}
       <motion.div
-        initial={{ opacity: 0, y: 24 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, ease: [0.2, 0, 0.2, 1] }}
-        className="w-full max-w-md relative z-10"
-        style={{
-          background: 'rgba(15,21,32,0.9)',
-          backdropFilter: 'blur(20px)',
-          border: '1px solid rgba(255,255,255,0.08)',
-          borderRadius: '20px',
-          padding: '40px',
-        }}
+        initial={{ opacity: 0, scale: 0.96 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.4 }}
+        className="max-w-4xl w-full grid grid-cols-1 md:grid-cols-12 bg-[#0F1520] border-2 border-white/10 rounded-3xl overflow-hidden shadow-2xl relative z-10"
       >
-        {/* Logo */}
-        <div className="text-center mb-10">
-          <div
-            className="font-display text-5xl mb-2 tracking-wider"
-            style={{ color: '#FF6B2B', textShadow: '0 0 30px rgba(255,107,43,0.4)' }}
-          >
-            DRAFTWAR
+        
+        {/* Left Editorial Poster Panel (Hidden on Mobile) */}
+        <div className="hidden md:flex md:col-span-5 relative flex-col justify-between p-8 border-r border-white/10 bg-[#0A0E15] overflow-hidden">
+          {/* Ambient Image Background */}
+          <div className="absolute inset-0 opacity-40">
+            <img 
+              src="/assets/hero_footballer.jpg" 
+              alt="DraftWar Star" 
+              className="w-full h-full object-cover object-top"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#0A0E15] via-[#0A0E15]/60 to-transparent" />
           </div>
-          <p className="dw-label" style={{ color: '#8A95A8' }}>
-            Build your squad. Win the war.
-          </p>
+
+          {/* Top Stamp */}
+          <div className="relative z-10">
+            <span className="font-mono text-[10px] text-[#FF5500] font-bold tracking-widest uppercase px-2 py-0.5 rounded bg-[#FF5500]/10 border border-[#FF5500]/30">
+              OPERATOR ACCESS // v2.4
+            </span>
+            <div className="font-display text-4xl font-black text-white mt-2">
+              DRAFT<span className="text-[#FF5500]">WAR</span>
+            </div>
+          </div>
+
+          {/* Bottom Editorial Quote */}
+          <div className="relative z-10">
+            <p className="font-editorial italic text-lg text-white/90 leading-snug">
+              "Squads are not built on luck. They are forged under pressure."
+            </p>
+            <span className="font-mono text-[10px] text-[#8A95A8] tracking-widest uppercase block mt-2">
+              — WAR ROOM PROTOCOL
+            </span>
+          </div>
         </div>
 
-        {error && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            className="mb-6 px-4 py-3 rounded-lg text-sm font-bold text-center"
-            style={{ background: 'rgba(255,59,59,0.1)', border: '1px solid rgba(255,59,59,0.4)', color: '#FF3B3B' }}
-          >
-            {error}
-          </motion.div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-5">
+        {/* Right Form Panel */}
+        <div className="md:col-span-7 p-8 sm:p-10 flex flex-col justify-between">
+          
           <div>
-            <label className="dw-label block mb-2">Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              placeholder="you@example.com"
-              required
-              className="dw-input"
-            />
-          </div>
-          <div>
-            <label className="dw-label block mb-2">Password</label>
-            <input
-              type="password"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              placeholder="Enter your password"
-              required
-              className="dw-input"
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="w-full py-4 rounded-xl font-heading font-bold text-base uppercase tracking-widest transition-all duration-150 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{
-              background: isLoading ? '#CC5522' : '#FF6B2B',
-              color: 'white',
-              boxShadow: isLoading ? 'none' : '0 0 24px rgba(255,107,43,0.4)',
-            }}
-          >
-            {isLoading ? (
-              <span className="flex items-center justify-center gap-2">
-                <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                Signing in...
+            {/* Top Navigation Row */}
+            <div className="flex items-center justify-between pb-6 mb-6 border-b border-white/10">
+              <Link 
+                to="/" 
+                className="font-mono text-xs text-[#8A95A8] hover:text-[#FF5500] transition-colors flex items-center gap-1"
+              >
+                ← BACK TO PLAYBOOK
+              </Link>
+              <span className="font-mono text-[10px] text-white/40 uppercase">
+                SECURE AUTH GATEWAY
               </span>
-            ) : 'Sign In'}
-          </button>
-        </form>
+            </div>
 
-        <div className="mt-8 text-center text-sm" style={{ color: '#8A95A8' }}>
-          No account?{' '}
-          <Link
-            to="/register"
-            className="font-bold transition-colors"
-            style={{ color: '#FF6B2B' }}
-          >
-            Create one — it's free
-          </Link>
+            <div className="mb-6">
+              <h2 className="font-display text-4xl font-black uppercase text-white tracking-wide">
+                MANAGER LOGIN
+              </h2>
+              <p className="text-xs text-[#8A95A8] mt-1 font-mono">
+                ENTER CREDENTIALS TO RESUME TACTICAL COMMAND
+              </p>
+            </div>
+
+            {error && (
+              <div className="mb-6 px-4 py-3 rounded-xl text-xs font-mono font-bold bg-[#FF3B3B]/10 border border-[#FF3B3B]/40 text-[#FF3B3B]">
+                {error}
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="font-mono text-[10px] uppercase tracking-widest text-[#8A95A8] block mb-1">
+                  OFFICIAL EMAIL
+                </label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  placeholder="manager@draftwar.gg"
+                  required
+                  className="w-full bg-[#161E2E] border border-white/10 focus:border-[#FF5500] rounded-xl px-4 py-3 text-sm text-white outline-none transition-colors"
+                />
+              </div>
+
+              <div>
+                <label className="font-mono text-[10px] uppercase tracking-widest text-[#8A95A8] block mb-1">
+                  ACCESS CIPHER (PASSWORD)
+                </label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  placeholder="••••••••••••"
+                  required
+                  className="w-full bg-[#161E2E] border border-white/10 focus:border-[#FF5500] rounded-xl px-4 py-3 text-sm text-white outline-none transition-colors"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full py-3.5 rounded-xl bg-[#FF5500] text-white font-heading font-black text-base uppercase tracking-widest shadow-[0_0_20px_rgba(255,85,0,0.4)] hover:shadow-[0_0_30px_rgba(255,85,0,0.7)] hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 mt-6 disabled:opacity-50"
+              >
+                {isLoading ? (
+                  <span className="font-mono text-xs">CONNECTING...</span>
+                ) : (
+                  <>
+                    <span>ENTER WAR ROOM</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
+              </button>
+            </form>
+
+            {/* Quick One-Click Demo Logins */}
+            <div className="mt-6 pt-6 border-t border-white/10">
+              <span className="font-mono text-[9px] uppercase tracking-widest text-[#8A95A8] block mb-2">
+                ⚡ 1-CLICK TEST CREDENTIALS (INSTANT DEV ACCESS)
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleQuickLogin('jose@ex.com')}
+                  className="flex-1 py-2 rounded-lg bg-[#161E2E] hover:bg-[#1C263A] border border-white/10 text-xs font-mono text-[#FF5500] transition-colors"
+                >
+                  Jose (Tactician)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleQuickLogin('carlo@ex.com')}
+                  className="flex-1 py-2 rounded-lg bg-[#161E2E] hover:bg-[#1C263A] border border-white/10 text-xs font-mono text-[#E8B84B] transition-colors"
+                >
+                  Carlo (Champion)
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="pt-6 text-center text-xs font-mono text-[#8A95A8]">
+            Need commissioning?{' '}
+            <Link to="/register" className="text-[#FF5500] font-bold hover:underline">
+              REGISTER NEW MANAGER →
+            </Link>
+          </div>
+
         </div>
+
       </motion.div>
+
     </div>
   );
 }
