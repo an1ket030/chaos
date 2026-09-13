@@ -5,14 +5,22 @@ export default {
     extend: {
       colors: {
         // DraftWar Design Tokens
-        bg: '#080C12',
-        surface: '#0F1520',
-        elevated: '#161E2E',
-        // Brand colors
+        bg: '#06090E',
+        surface: '#0B1017',
+        elevated: '#121824',
+        // Battle Crimson Brand System
+        crimson: {
+          DEFAULT: '#B81D1D',
+          bright: '#D92525',
+          dark: '#6A0C0C',
+          subtle: 'rgba(184, 29, 29, 0.15)',
+          glow: 'rgba(184, 29, 29, 0.45)',
+        },
+        // Brand aliases redirected to Battle Crimson (strictly no orange)
         fire: {
-          DEFAULT: '#FF6B2B',
-          dim: '#CC5522',
-          glow: 'rgba(255,107,43,0.35)',
+          DEFAULT: '#B81D1D',
+          dim: '#8A1515',
+          glow: 'rgba(184, 29, 29, 0.45)',
         },
         steel: '#3D8EFF',
         'dw-gold': {
@@ -23,39 +31,35 @@ export default {
           DEFAULT: '#9B5DE5',
           glow: 'rgba(155,93,229,0.35)',
         },
-        danger: '#FF3B3B',
-        win: '#2ECC71',
+        danger: '#D92525',
+        win: '#00E599',
         // Text tokens
         muted: '#8A95A8',
         ghost: '#3A4458',
         // Legacy aliases kept for backward compat
         dark: {
-          DEFAULT: '#080C12',
-          surface: '#0F1520',
-          elevated: '#161E2E',
+          DEFAULT: '#06090E',
+          surface: '#0B1017',
+          elevated: '#121824',
         },
         primary: {
-          DEFAULT: '#FF6B2B',
-          dim: '#CC5522',
+          DEFAULT: '#B81D1D',
+          dim: '#8A1515',
+          bright: '#D92525',
         },
         secondary: '#8A95A8',
         // Card tier colors
         gold: '#E8B84B',
         silver: '#8A95A8',
         bronze: '#CD7F32',
-        // Editorial Paper & Ink tokens (from moodboards)
+        // Editorial Paper & Ink tokens
         paper: {
           DEFAULT: '#F4EFE6',
           dark: '#E8E1D5',
         },
         ink: {
-          DEFAULT: '#111620',
+          DEFAULT: '#0B1017',
           muted: '#3D4654',
-        },
-        crimson: {
-          DEFAULT: '#B81D1D',
-          bright: '#E52B2B',
-          glow: 'rgba(184, 29, 29, 0.4)',
         },
         pitch: {
           DEFAULT: '#00E599',

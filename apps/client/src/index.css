@@ -15,7 +15,7 @@
   }
 
   body {
-    background-color: #080C12;
+    background-color: #06090E;
     color: #F0F4FF;
     font-family: 'Inter', sans-serif;
     min-height: 100vh;
@@ -32,32 +32,35 @@
   }
 
   ::-webkit-scrollbar { width: 4px; height: 4px; }
-  ::-webkit-scrollbar-track { background: #0F1520; }
-  ::-webkit-scrollbar-thumb { background: rgba(255,107,43,0.3); border-radius: 2px; }
-  ::-webkit-scrollbar-thumb:hover { background: rgba(255,107,43,0.6); }
+  ::-webkit-scrollbar-track { background: #0B1017; }
+  ::-webkit-scrollbar-thumb { background: rgba(184, 29, 29, 0.4); border-radius: 2px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(217, 37, 37, 0.8); }
 
-  :focus-visible { outline: 2px solid #FF6B2B; outline-offset: 2px; }
+  :focus-visible { outline: 2px solid #B81D1D; outline-offset: 2px; }
 }
 
 /* =====================================================
-   DraftWar CSS Variables
+   DraftWar CSS Variables — Battle Crimson System
    ===================================================== */
 :root {
-  --dw-void: #080C12;
-  --dw-surface: #0F1520;
-  --dw-elevated: #161E2E;
-  --dw-border: rgba(255,255,255,0.07);
-  --dw-border-active: rgba(255,255,255,0.18);
-  --dw-fire: #FF6B2B;
-  --dw-fire-dim: #CC5522;
-  --dw-fire-glow: rgba(255,107,43,0.35);
+  --dw-void: #06090E;
+  --dw-surface: #0B1017;
+  --dw-elevated: #121824;
+  --dw-border: rgba(255,255,255,0.08);
+  --dw-border-active: rgba(255,255,255,0.20);
+  --dw-fire: #B81D1D;
+  --dw-fire-dim: #8A1515;
+  --dw-fire-glow: rgba(184, 29, 29, 0.45);
+  --dw-crimson: #B81D1D;
+  --dw-crimson-bright: #D92525;
+  --dw-crimson-glow: rgba(184, 29, 29, 0.45);
   --dw-steel: #3D8EFF;
   --dw-gold: #E8B84B;
   --dw-gold-glow: rgba(232,184,75,0.35);
   --dw-chaos: #9B5DE5;
   --dw-chaos-glow: rgba(155,93,229,0.35);
-  --dw-danger: #FF3B3B;
-  --dw-success: #2ECC71;
+  --dw-danger: #D92525;
+  --dw-success: #00E599;
   --dw-text-primary: #F0F4FF;
   --dw-text-secondary: #8A95A8;
   --dw-text-ghost: #3A4458;
@@ -133,7 +136,7 @@
     box-shadow: 0 0 20px var(--dw-fire-glow);
   }
   .btn-primary:hover:not(:disabled) {
-    background: #FF8050;
+    background: #D92525;
     transform: scale(1.03);
   }
   .btn-secondary {
@@ -284,7 +287,13 @@
   .rotate-y-180 { transform: rotateY(180deg); }
 
   .text-gradient-fire {
-    background: linear-gradient(135deg, #FF6B2B, #FF9A5C);
+    background: linear-gradient(135deg, #B81D1D, #D92525);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .text-gradient-crimson {
+    background: linear-gradient(135deg, #B81D1D 0%, #D92525 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -302,7 +311,7 @@
     background-clip: text;
   }
   .text-gradient-war {
-    background: linear-gradient(135deg, #FF6B2B 0%, #E8B84B 100%);
+    background: linear-gradient(135deg, #B81D1D 0%, #D92525 60%, #E8B84B 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -315,22 +324,22 @@
     -webkit-text-stroke: 1.5px rgba(255, 255, 255, 0.35);
     color: transparent;
   }
-  .text-stroke-orange {
-    -webkit-text-stroke: 1.5px #FF5500;
+  .text-stroke-crimson {
+    -webkit-text-stroke: 1.5px #B81D1D;
     color: transparent;
   }
   .text-stroke-ink {
-    -webkit-text-stroke: 1.5px #111620;
+    -webkit-text-stroke: 1.5px #0B1017;
     color: transparent;
   }
 
   .tactical-dot-matrix {
-    background-image: radial-gradient(rgba(255, 107, 43, 0.25) 1.5px, transparent 1.5px);
+    background-image: radial-gradient(rgba(184, 29, 29, 0.25) 1.5px, transparent 1.5px);
     background-size: 24px 24px;
   }
 
   .paper-dot-matrix {
-    background-image: radial-gradient(rgba(17, 22, 32, 0.15) 1.5px, transparent 1.5px);
+    background-image: radial-gradient(rgba(11, 16, 23, 0.15) 1.5px, transparent 1.5px);
     background-size: 20px 20px;
   }
 
@@ -340,11 +349,11 @@
   }
 
   .editorial-shadow {
-    box-shadow: 6px 6px 0px #FF5500;
+    box-shadow: 6px 6px 0px #B81D1D;
   }
 
   .editorial-shadow-dark {
-    box-shadow: 6px 6px 0px #111620;
+    box-shadow: 6px 6px 0px #0B1017;
   }
 
   .bg-grid {

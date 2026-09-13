@@ -70,7 +70,7 @@ export function RegisterPage() {
               NEW COMMISSION // ROSTER ENLISTMENT
             </span>
             <div className="font-display text-4xl font-black text-white mt-2">
-              DRAFT<span className="text-[#FF5500]">WAR</span>
+              DRAFT<span className="text-[#B81D1D]">WAR</span>
             </div>
           </div>
 
@@ -93,9 +93,9 @@ export function RegisterPage() {
             <div className="flex items-center justify-between pb-6 mb-6 border-b border-white/10">
               <Link 
                 to="/" 
-                className="font-mono text-xs text-[#8A95A8] hover:text-[#FF5500] transition-colors flex items-center gap-1"
+                className="font-mono text-xs text-[#8A95A8] hover:text-[#D92525] transition-colors flex items-center gap-1"
               >
-                ← BACK TO PLAYBOOK
+                ← BACK TO ARENA
               </Link>
               <span className="font-mono text-[10px] text-white/40 uppercase">
                 COMMISSIONING DESK
@@ -112,7 +112,7 @@ export function RegisterPage() {
             </div>
 
             {error && (
-              <div className="mb-6 px-4 py-3 rounded-xl text-xs font-mono font-bold bg-[#FF3B3B]/10 border border-[#FF3B3B]/40 text-[#FF3B3B]">
+              <div className="mb-6 px-4 py-3 rounded-xl text-xs font-mono font-bold bg-[#D92525]/10 border border-[#D92525]/40 text-[#D92525]">
                 {error}
               </div>
             )}
@@ -130,7 +130,7 @@ export function RegisterPage() {
                   required
                   minLength={3}
                   maxLength={32}
-                  className="w-full bg-[#161E2E] border border-white/10 focus:border-[#FF5500] rounded-xl px-4 py-3 text-sm text-white outline-none transition-colors"
+                  className="w-full bg-[#161E2E] border border-white/10 focus:border-[#B81D1D] rounded-xl px-4 py-3 text-sm text-white outline-none transition-colors"
                 />
               </div>
 
@@ -144,7 +144,7 @@ export function RegisterPage() {
                   onChange={e => setEmail(e.target.value)}
                   placeholder="manager@draftwar.gg"
                   required
-                  className="w-full bg-[#161E2E] border border-white/10 focus:border-[#FF5500] rounded-xl px-4 py-3 text-sm text-white outline-none transition-colors"
+                  className="w-full bg-[#161E2E] border border-white/10 focus:border-[#B81D1D] rounded-xl px-4 py-3 text-sm text-white outline-none transition-colors"
                 />
               </div>
 
@@ -159,14 +159,14 @@ export function RegisterPage() {
                   placeholder="••••••••••••"
                   required
                   minLength={8}
-                  className="w-full bg-[#161E2E] border border-white/10 focus:border-[#FF5500] rounded-xl px-4 py-3 text-sm text-white outline-none transition-colors"
+                  className="w-full bg-[#161E2E] border border-white/10 focus:border-[#B81D1D] rounded-xl px-4 py-3 text-sm text-white outline-none transition-colors"
                 />
               </div>
 
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full py-3.5 rounded-xl bg-[#FF5500] text-white font-heading font-black text-base uppercase tracking-widest shadow-[0_0_20px_rgba(255,85,0,0.4)] hover:shadow-[0_0_30px_rgba(255,85,0,0.7)] hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 mt-6 disabled:opacity-50"
+                className="w-full py-3.5 rounded-xl bg-gradient-to-r from-[#B81D1D] to-[#D92525] text-white font-heading font-black text-base uppercase tracking-widest shadow-[0_0_20px_rgba(184,29,29,0.4)] hover:shadow-[0_0_30px_rgba(184,29,29,0.7)] hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 mt-6 disabled:opacity-50"
               >
                 {isLoading ? (
                   <span className="font-mono text-xs">ENLISTING...</span>
@@ -193,7 +193,7 @@ export function RegisterPage() {
 
           <div className="pt-6 text-center text-xs font-mono text-[#8A95A8]">
             Already commissioned?{' '}
-            <Link to="/login" className="text-[#FF5500] font-bold hover:underline">
+            <Link to="/login" className="text-[#D92525] font-bold hover:underline">
               MANAGER LOGIN →
             </Link>
           </div>
