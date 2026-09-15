@@ -20,39 +20,39 @@ export const PuppeteerStrings: React.FC<StringsProps> = ({
 }) => {
   // Left crossbar attachment points (in 1000x650 coordinate space)
   const leftBarPoints = [
-    { x: 175, y: 256 },
-    { x: 215, y: 256 },
-    { x: 285, y: 256 },
-    { x: 325, y: 256 },
+    { x: 275, y: 240 },
+    { x: 330, y: 240 },
+    { x: 395, y: 240 },
+    { x: 455, y: 240 },
   ];
 
   // Left button top eyelet attachment points
   const leftEyelets = [
-    { x: 160 + leftDelta.x, y: 456 + leftDelta.y },
-    { x: 210 + leftDelta.x, y: 456 + leftDelta.y },
-    { x: 310 + leftDelta.x, y: 456 + leftDelta.y },
-    { x: 360 + leftDelta.x, y: 456 + leftDelta.y },
+    { x: 265 + leftDelta.x, y: 455 + leftDelta.y },
+    { x: 330 + leftDelta.x, y: 455 + leftDelta.y },
+    { x: 400 + leftDelta.x, y: 455 + leftDelta.y },
+    { x: 465 + leftDelta.x, y: 455 + leftDelta.y },
   ];
 
   // Right crossbar attachment points
   const rightBarPoints = [
-    { x: 675, y: 256 },
-    { x: 715, y: 256 },
-    { x: 785, y: 256 },
-    { x: 825, y: 256 },
+    { x: 545, y: 240 },
+    { x: 605, y: 240 },
+    { x: 670, y: 240 },
+    { x: 725, y: 240 },
   ];
 
   // Right button top eyelet attachment points
   const rightEyelets = [
-    { x: 640 + rightDelta.x, y: 456 + rightDelta.y },
-    { x: 690 + rightDelta.x, y: 456 + rightDelta.y },
-    { x: 790 + rightDelta.x, y: 456 + rightDelta.y },
-    { x: 840 + rightDelta.x, y: 456 + rightDelta.y },
+    { x: 535 + rightDelta.x, y: 455 + rightDelta.y },
+    { x: 600 + rightDelta.x, y: 455 + rightDelta.y },
+    { x: 670 + rightDelta.x, y: 455 + rightDelta.y },
+    { x: 735 + rightDelta.x, y: 455 + rightDelta.y },
   ];
 
-  // Calculate sag: straightens when hovered or active
-  const leftSag = isLeftActive ? 0 : isLeftHovered ? 1 : 3.5;
-  const rightSag = isRightActive ? 0 : isRightHovered ? 1 : 3.5;
+  // Calculate sag: straightens into taut tension when hovered or active
+  const leftSag = isLeftActive ? 0 : isLeftHovered ? 0.6 : 3.8;
+  const rightSag = isRightActive ? 0 : isRightHovered ? 0.6 : 3.8;
 
   return (
     <svg

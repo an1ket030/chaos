@@ -423,13 +423,13 @@ export function LandingPage() {
               rightDelta={rightDelta}
             />
 
-            {/* 6. Real HTML Plaque Button: CREATE ROOM (Left) */}
+            {/* 6. Real HTML Plaque Button: CREATE ROOM (Left - Suspended beneath CR7's Left Hand) */}
             <div 
               style={{
                 position: 'absolute',
-                left: '12%',
+                left: '23.9%',
                 top: '70%',
-                width: '28%',
+                width: '25%',
               }}
               className="z-30"
             >
@@ -460,13 +460,13 @@ export function LandingPage() {
               />
             </div>
 
-            {/* 7. Real HTML Plaque Button: JOIN ROOM (Right) */}
+            {/* 7. Real HTML Plaque Button: JOIN ROOM (Right - Suspended beneath CR7's Right Hand) */}
             <div 
               style={{
                 position: 'absolute',
-                right: '12%',
+                left: '51.1%',
                 top: '70%',
-                width: '28%',
+                width: '25%',
               }}
               className="z-30"
             >

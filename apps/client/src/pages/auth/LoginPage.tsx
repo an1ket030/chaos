@@ -54,7 +54,7 @@ export function LoginPage() {
           {/* Ambient Image Background */}
           <div className="absolute inset-0 opacity-40">
             <img 
-              src="/assets/hero_footballer.jpg" 
+              src="/assets/striker_clash.jpg" 
               alt="DraftWar Star" 
               className="w-full h-full object-cover object-top"
             />
