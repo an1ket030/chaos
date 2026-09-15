@@ -4,10 +4,10 @@ import { motion, AnimatePresence, useMotionValue, useSpring, useTransform } from
 import { useAuthStore } from '../../store/authStore';
 import { api } from '../../lib/api';
 import { 
-  Trophy, Flame, Zap, Shield, ArrowRight, X, Play, 
-  Sparkles, CheckCircle2, ChevronRight, Hash, Volume2, VolumeX,
-  Radio, Award, Users, Crosshair
+  Users, Gamepad2, X, ArrowRight, Volume2, VolumeX,
+  Shield, Trophy, Zap, ChevronRight, Hash, Flame, User, Check
 } from 'lucide-react';
+import { PuppeteerStrings } from './PuppeteerStrings';
 import {
   DoodleFootball,
   DoodleWhistle,
@@ -23,7 +23,9 @@ import {
   DoodleGoalpost,
   DoodleLightning,
   DoodleSparkle,
-  DoodleCross
+  DoodleCross,
+  DoodlePitchCrown,
+  DoodleNumber7
 } from './FootballDoodles';
 
 // Editions available for room creation
@@ -36,49 +38,60 @@ const EDITIONS = [
 
 export function LandingPage() {
   const navigate = useNavigate();
-  const { isAuthenticated, user, setUser } = useAuthStore();
+  const { isAuthenticated, user } = useAuthStore();
 
   // Modals state
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showJoinModal, setShowJoinModal] = useState(false);
+  const [showHowToPlay, setShowHowToPlay] = useState(false);
 
-  // Sound toggle (for immersion)
+  // Audio immersion toggle
   const [soundEnabled, setSoundEnabled] = useState(true);
+
+  // Interactive Puppeteer Strings & Button physics state
+  const [isLeftHovered, setIsLeftHovered] = useState(false);
+  const [isRightHovered, setIsRightHovered] = useState(false);
+  const [isLeftActive, setIsLeftActive] = useState(false);
+  const [isRightActive, setIsRightActive] = useState(false);
+
+  // Dynamic button sway offsets
+  const [leftDelta, setLeftDelta] = useState({ x: 0, y: 0 });
+  const [rightDelta, setRightDelta] = useState({ x: 0, y: 0 });
 
   // ─── PARALLAX MOUSE TRACKING ──────────────────────────────────────────────
   const mouseX = useMotionValue(0);
   const mouseY = useMotionValue(0);
 
-  // Smooth springs to eliminate jitter
-  const springConfig = { damping: 28, stiffness: 100, mass: 0.8 };
+  // Spring physics for smooth camera depth
+  const springConfig = { damping: 30, stiffness: 90, mass: 0.8 };
   const smoothX = useSpring(mouseX, springConfig);
   const smoothY = useSpring(mouseY, springConfig);
 
-  // Layer 1: Background slow shift (-12px to +12px)
-  const bgX = useTransform(smoothX, [-1, 1], [-14, 14]);
-  const bgY = useTransform(smoothY, [-1, 1], [-14, 14]);
+  // Layer 1: Background slow shift (-10px to +10px)
+  const bgX = useTransform(smoothX, [-1, 1], [-12, 12]);
+  const bgY = useTransform(smoothY, [-1, 1], [-12, 12]);
 
-  // Layer 2: Midground tactical doodles (-32px to +32px)
-  const midX = useTransform(smoothX, [-1, 1], [-35, 35]);
-  const midY = useTransform(smoothY, [-1, 1], [-35, 35]);
+  // Layer 2: Midground doodles (-25px to +25px)
+  const midX = useTransform(smoothX, [-1, 1], [-28, 28]);
+  const midY = useTransform(smoothY, [-1, 1], [-28, 28]);
 
-  // Layer 3: Foreground fast particles (-65px to +65px)
-  const fgX = useTransform(smoothX, [-1, 1], [-65, 65]);
-  const fgY = useTransform(smoothY, [-1, 1], [-65, 65]);
+  // Layer 3: Foreground particles (-50px to +50px)
+  const fgX = useTransform(smoothX, [-1, 1], [-50, 50]);
+  const fgY = useTransform(smoothY, [-1, 1], [-50, 50]);
 
-  // Center Footballer: Very subtle stabilization (-8px to +8px)
-  const heroX = useTransform(smoothX, [-1, 1], [-8, 8]);
-  const heroY = useTransform(smoothY, [-1, 1], [-8, 8]);
+  // Ronaldo slight stabilization (-6px to +6px)
+  const ronaldoX = useTransform(smoothX, [-1, 1], [-6, 6]);
+  const ronaldoY = useTransform(smoothY, [-1, 1], [-6, 6]);
 
   const handleMouseMove = (e: React.MouseEvent) => {
     const { innerWidth, innerHeight } = window;
-    const x = (e.clientX / innerWidth) * 2 - 1; // Range [-1, 1]
-    const y = (e.clientY / innerHeight) * 2 - 1; // Range [-1, 1]
+    const x = (e.clientX / innerWidth) * 2 - 1;
+    const y = (e.clientY / innerHeight) * 2 - 1;
     mouseX.set(x);
     mouseY.set(y);
   };
 
-  // ─── CREATE ROOM STATE ───────────────────────────────────────────────────
+  // ─── CREATE ROOM STATE & HANDLER ─────────────────────────────────────────
   const [createEdition, setCreateEdition] = useState('world-cup');
   const [createBudget, setCreateBudget] = useState(120);
   const [createTimer, setCreateTimer] = useState<8 | 10 | 15>(10);
@@ -93,7 +106,7 @@ export function LandingPage() {
     try {
       let token = localStorage.getItem('accessToken');
       
-      // If user isn't logged in, auto-register/login as guest manager
+      // Auto-enlist guest manager if no active token
       if (!token) {
         const guestName = guestManagerName.trim() || `Manager_${Math.floor(1000 + Math.random() * 9000)}`;
         const guestEmail = `guest_${Date.now()}@draftwar.game`;
@@ -133,7 +146,7 @@ export function LandingPage() {
     }
   };
 
-  // ─── ENTER ROOM (JOIN BY CODE) STATE ─────────────────────────────────────
+  // ─── JOIN ROOM STATE & HANDLER ───────────────────────────────────────────
   const [joinCode, setJoinCode] = useState('');
   const [joinError, setJoinError] = useState('');
 
@@ -150,110 +163,94 @@ export function LandingPage() {
   return (
     <div 
       onMouseMove={handleMouseMove}
-      className="min-h-screen bg-[#06090E] text-[#F4F6FB] overflow-x-hidden selection:bg-[#B81D1D] selection:text-white"
+      className="min-h-screen bg-[#050305] text-[#F4F6FB] overflow-x-hidden selection:bg-[#B81D1D] selection:text-white relative font-body"
     >
       {/* =====================================================================
-          1. MINIMAL GAME HEADER NAVIGATION
+          1. MINIMAL CINEMATIC HEADER
           ===================================================================== */}
-      <header className="fixed top-0 left-0 right-0 z-50 h-20 px-6 md:px-12 flex items-center justify-between border-b border-white/[0.07] bg-[#06090E]/85 backdrop-blur-xl">
-        <div className="flex items-center gap-6">
-          <button 
-            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-            className="flex items-center gap-3 text-left group cursor-pointer"
-          >
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#B81D1D] to-[#6A0C0C] flex items-center justify-center shadow-[0_0_20px_rgba(184,29,29,0.5)] border border-[#D92525]/40 group-hover:scale-105 transition-transform">
-              <Flame className="w-5 h-5 text-white" />
+      <header className="fixed top-0 left-0 right-0 z-50 h-20 px-6 md:px-12 flex items-center justify-between pointer-events-auto">
+        {/* Left: Crown Crest + Wordmark */}
+        <div 
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          className="flex items-center gap-3.5 cursor-pointer group select-none"
+        >
+          <div className="w-10 h-10 flex items-center justify-center filter drop-shadow-[0_0_12px_rgba(217,37,37,0.65)] group-hover:scale-105 transition-transform">
+            <DoodlePitchCrown size={36} color="#D92525" />
+          </div>
+          <div className="flex flex-col">
+            <div className="font-editorial tracking-[0.22em] text-lg sm:text-xl font-bold uppercase text-white flex items-center gap-1.5">
+              <span>PITCH</span>
+              <span className="text-[#D92525]">LORDS</span>
             </div>
-            <div>
-              <div className="font-display text-2xl md:text-3xl tracking-wider leading-none text-white flex items-center gap-1.5">
-                <span className="text-[#B81D1D]">DRAFT</span>WAR
-                <span className="text-[10px] font-mono tracking-widest px-2 py-0.5 rounded bg-[#B81D1D]/20 border border-[#B81D1D]/40 text-[#D92525] uppercase">
-                  GAME
-                </span>
-              </div>
-              <div className="font-mono text-[10px] text-[#8A95A8] tracking-widest uppercase">
-                Tactical Auction Arena
-              </div>
+            <div className="font-mono text-[9px] tracking-[0.3em] text-[#8A95A8] uppercase">
+              FOOTBALL LIVES HERE
             </div>
-          </button>
+          </div>
         </div>
 
-        {/* Minimal Actions / Profile */}
-        <div className="flex items-center gap-4">
-          <a
-            href="#how-to-play"
-            className="hidden sm:inline-flex font-mono text-xs text-[#8A95A8] hover:text-[#F4F6FB] uppercase tracking-wider transition-colors px-3 py-1.5 rounded-lg border border-transparent hover:border-white/10"
+        {/* Right: How to play + Login / Profile */}
+        <div className="flex items-center gap-5">
+          <button
+            onClick={() => setShowHowToPlay(true)}
+            className="font-mono text-xs uppercase tracking-[0.2em] text-[#A6B2C8] hover:text-white transition-colors cursor-pointer px-3 py-1.5"
           >
-            // How To Play
-          </a>
+            HOW TO PLAY
+          </button>
 
           {isAuthenticated && user ? (
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => navigate('/lobby')}
-                className="flex items-center gap-2.5 px-4 py-2 rounded-xl bg-[#0B1017] border border-[#B81D1D]/40 hover:border-[#D92525] transition-all shadow-[0_0_15px_rgba(184,29,29,0.2)] group"
-              >
-                <div className="w-6 h-6 rounded-full bg-[#B81D1D] flex items-center justify-center text-xs font-bold text-white">
-                  {user.username.charAt(0).toUpperCase()}
-                </div>
-                <span className="font-heading font-bold text-sm text-white tracking-wide uppercase">
-                  {user.username}
-                </span>
-                <span className="font-mono text-xs text-[#E8B84B] font-bold">
-                  {user.elo_rating || 1000} ELO
-                </span>
-                <ChevronRight className="w-4 h-4 text-[#8A95A8] group-hover:translate-x-0.5 transition-transform" />
-              </button>
-            </div>
+            <button
+              onClick={() => navigate('/lobby')}
+              className="flex items-center gap-2.5 px-4 py-2 rounded-xl bg-[#0E0A0D]/90 border border-[#D92525]/50 hover:border-[#D92525] shadow-[0_0_20px_rgba(217,37,37,0.3)] transition-all cursor-pointer group"
+            >
+              <div className="w-6 h-6 rounded-full bg-[#B81D1D] flex items-center justify-center text-xs font-bold text-white">
+                {user.username.charAt(0).toUpperCase()}
+              </div>
+              <span className="font-heading font-bold text-sm tracking-wider uppercase text-white">
+                {user.username}
+              </span>
+              <span className="font-mono text-xs text-[#E8B84B] font-bold">
+                {user.elo_rating || 1000} ELO
+              </span>
+              <ChevronRight className="w-3.5 h-3.5 text-[#8A95A8] group-hover:translate-x-0.5 transition-transform" />
+            </button>
           ) : (
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => navigate('/login')}
-                className="font-heading font-bold text-xs md:text-sm uppercase tracking-wider px-4 py-2 rounded-lg text-[#8A95A8] hover:text-white hover:bg-white/[0.04] transition-all"
-              >
-                Sign In
-              </button>
-              <button
-                onClick={() => navigate('/register')}
-                className="font-heading font-bold text-xs md:text-sm uppercase tracking-wider px-4 py-2 rounded-lg bg-[#B81D1D] hover:bg-[#D92525] text-white shadow-[0_0_15px_rgba(184,29,29,0.4)] transition-all"
-              >
-                Register
-              </button>
-            </div>
+            <button
+              onClick={() => navigate('/login')}
+              className="flex items-center gap-2 px-5 py-2 rounded-xl bg-[#0E0A0D]/80 hover:bg-[#1A1217] border border-[#D92525]/60 hover:border-[#D92525] text-white font-mono text-xs uppercase tracking-[0.18em] shadow-[0_0_18px_rgba(217,37,37,0.35)] transition-all cursor-pointer group"
+            >
+              <User className="w-3.5 h-3.5 text-[#D92525] group-hover:scale-110 transition-transform" />
+              <span>LOGIN</span>
+            </button>
           )}
         </div>
       </header>
 
       {/* =====================================================================
-          SECTION 1: THE GAME TITLE / HERO LAUNCH SCREEN (DOMINANT VIEW)
+          2. THE MAIN HERO CANVAS — CRISTIANO RONALDO PUPPETEER
           ===================================================================== */}
-      <section className="relative w-full min-h-screen pt-24 pb-12 flex flex-col items-center justify-center overflow-hidden">
-        {/* Deep Stadium Ambient Glows */}
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] md:w-[1100px] h-[550px] bg-[#B81D1D]/15 rounded-full blur-[140px]" />
-          <div className="absolute top-1/4 left-1/4 w-[400px] h-[400px] bg-[#D92525]/10 rounded-full blur-[120px]" />
-          <div className="absolute bottom-10 left-1/2 -translate-x-1/2 w-full h-[200px] bg-gradient-to-t from-[#06090E] via-[#06090E]/80 to-transparent z-20" />
+      <section className="relative w-full min-h-screen flex items-center justify-center overflow-hidden pt-12 select-none">
+        
+        {/* Dynamic Dark Ambient Lighting */}
+        <div className="absolute inset-0 pointer-events-none z-0">
+          <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] md:w-[1200px] h-[600px] bg-[#B81D1D]/15 rounded-full blur-[160px]" />
+          <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-[#050305] via-[#050305]/80 to-transparent z-30" />
         </div>
 
-        {/* ── LAYER 1: BACKGROUND (Slow Parallax Drift: Pitch Grid & Geometry) ── */}
+        {/* ── LAYER 1: BACKGROUND (Slow Parallax Drift: Pitch Grid & Banners) ── */}
         <motion.div 
           style={{ x: bgX, y: bgY }}
-          className="absolute inset-0 pointer-events-none z-0 overflow-hidden"
+          className="absolute inset-0 pointer-events-none z-5 overflow-hidden"
         >
-          {/* Subtle tactical pitch markings */}
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] md:w-[1200px] h-[800px] md:h-[1200px] rounded-full border border-white/[0.04] pointer-events-none" />
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[450px] md:w-[650px] h-[450px] md:h-[650px] rounded-full border border-[#B81D1D]/10 pointer-events-none" />
+          {/* Subtle tactical pitch markings & stadium beams */}
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[900px] md:w-[1300px] h-[900px] md:h-[1300px] rounded-full border border-white/[0.03] pointer-events-none" />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] md:w-[750px] h-[500px] md:h-[750px] rounded-full border border-[#B81D1D]/10 pointer-events-none" />
           
-          {/* Tactical crosshair lines */}
-          <div className="absolute top-0 bottom-0 left-1/2 w-px bg-gradient-to-b from-transparent via-white/[0.05] to-transparent" />
-          <div className="absolute left-0 right-0 top-1/2 h-px bg-gradient-to-r from-transparent via-white/[0.05] to-transparent" />
-
-          {/* Goalpost outline & Pitch corner in background */}
-          <div className="absolute top-28 left-12 opacity-30 hidden lg:block">
-            <DoodleGoalpost size={110} color="rgba(244,246,251,0.25)" />
+          {/* Goalpost outline and crown watermarks */}
+          <div className="absolute top-28 left-16 opacity-25 hidden xl:block">
+            <DoodleGoalpost size={120} color="rgba(244,246,251,0.25)" />
           </div>
-          <div className="absolute top-36 right-16 opacity-30 hidden lg:block">
-            <DoodleFormation size={120} color="rgba(244,246,251,0.2)" />
+          <div className="absolute top-36 right-20 opacity-25 hidden xl:block">
+            <DoodleFormation size={130} color="rgba(244,246,251,0.2)" />
           </div>
         </motion.div>
 
@@ -265,283 +262,276 @@ export function LandingPage() {
           {/* Floating Sketched Football (Upper Left) */}
           <motion.div
             animate={{ 
-              y: [0, -14, 0],
-              rotate: [0, 8, -4, 0]
+              y: [0, -12, 0],
+              rotate: [0, 6, -4, 0]
             }}
-            transition={{ duration: 6.5, repeat: Infinity, ease: 'easeInOut' }}
-            className="absolute top-32 left-[8%] md:left-[14%]"
+            transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
+            className="absolute top-28 left-[10%] md:left-[14%]"
           >
-            <DoodleFootball size={75} color="#F4F6FB" />
+            <DoodleFootball size={70} color="#F4F6FB" />
           </motion.div>
 
-          {/* Tactical Whistle with Blast Waves (Upper Right) */}
+          {/* Tactical Whistle (Upper Right) */}
           <motion.div
             animate={{ 
-              y: [0, 12, 0],
-              rotate: [0, -6, 4, 0]
+              y: [0, 10, 0],
+              rotate: [0, -5, 3, 0]
             }}
-            transition={{ duration: 5.8, repeat: Infinity, ease: 'easeInOut', delay: 0.5 }}
-            className="absolute top-36 right-[8%] md:right-[15%]"
+            transition={{ duration: 5.5, repeat: Infinity, ease: 'easeInOut', delay: 0.4 }}
+            className="absolute top-32 right-[10%] md:right-[15%]"
           >
-            <DoodleWhistle size={70} color="#F4F6FB" />
+            <DoodleWhistle size={65} color="#F4F6FB" />
+          </motion.div>
+
+          {/* CR7 Number 7 Sketch (Near left banner) */}
+          <motion.div
+            animate={{ y: [0, -8, 0] }}
+            transition={{ duration: 5.8, repeat: Infinity, ease: 'easeInOut', delay: 0.8 }}
+            className="absolute top-[42%] left-[6%] md:left-[10%] opacity-80"
+          >
+            <DoodleNumber7 size={54} color="#F4F6FB" />
           </motion.div>
 
           {/* Cleat / Boot Sketch (Mid Left) */}
           <motion.div
             animate={{ 
               y: [0, -10, 0],
-              rotate: [-12, -8, -12]
+              rotate: [-10, -6, -10]
             }}
-            transition={{ duration: 7, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
-            className="absolute top-1/2 -translate-y-12 left-[4%] md:left-[10%]"
+            transition={{ duration: 6.5, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
+            className="absolute top-[56%] left-[4%] md:left-[8%]"
           >
-            <DoodleBoot size={85} color="#F4F6FB" />
+            <DoodleBoot size={75} color="#F4F6FB" />
           </motion.div>
 
-          {/* Champion Crown (Above player / Mid Right) */}
+          {/* Champion Crown (Mid Right) */}
           <motion.div
             animate={{ 
-              y: [0, -16, 0],
-              rotate: [4, -4, 4]
+              y: [0, -14, 0],
+              rotate: [3, -3, 3]
             }}
-            transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut', delay: 0.8 }}
-            className="absolute top-[28%] right-[22%] hidden md:block"
+            transition={{ duration: 6.2, repeat: Infinity, ease: 'easeInOut', delay: 0.6 }}
+            className="absolute top-[28%] right-[20%] hidden md:block"
           >
-            <DoodleCrown size={65} color="#E8B84B" />
+            <DoodleCrown size={60} color="#E8B84B" />
           </motion.div>
 
-          {/* Jersey #10 (Mid Right) */}
+          {/* Trophy sketch (Lower Right) */}
           <motion.div
             animate={{ 
-              y: [0, 14, 0],
-              rotate: [6, 12, 6]
+              y: [0, 10, 0],
+              rotate: [-2, 2, -2]
             }}
-            transition={{ duration: 6.2, repeat: Infinity, ease: 'easeInOut', delay: 1.4 }}
-            className="absolute top-1/2 -translate-y-8 right-[5%] md:right-[12%]"
+            transition={{ duration: 6.8, repeat: Infinity, ease: 'easeInOut', delay: 1.2 }}
+            className="absolute top-[54%] right-[5%] md:right-[9%]"
           >
-            <DoodleJersey size={75} number="10" color="#F4F6FB" />
+            <DoodleTrophy size={65} color="#E8B84B" />
           </motion.div>
 
-          {/* Referee Red & Yellow Cards (Lower Left) */}
-          <motion.div
-            animate={{ 
-              y: [0, -10, 0],
-              rotate: [0, 5, 0]
-            }}
-            transition={{ duration: 5.5, repeat: Infinity, ease: 'easeInOut', delay: 2 }}
-            className="absolute bottom-36 left-[10%] md:left-[18%]"
-          >
-            <DoodleCards size={60} />
-          </motion.div>
-
-          {/* Championship Trophy (Lower Right) */}
-          <motion.div
-            animate={{ 
-              y: [0, -12, 0],
-              rotate: [-3, 3, -3]
-            }}
-            transition={{ duration: 6.8, repeat: Infinity, ease: 'easeInOut', delay: 1.7 }}
-            className="absolute bottom-36 right-[10%] md:right-[18%]"
-          >
-            <DoodleTrophy size={70} color="#E8B84B" />
-          </motion.div>
-
-          {/* Tactical Press & Run Arrows */}
-          <div className="absolute top-[42%] left-[22%] hidden lg:block opacity-75">
-            <DoodleTacticalArrow size={80} angle={-25} color="#D92525" />
+          {/* Tactical Arrows */}
+          <div className="absolute top-[38%] left-[20%] hidden lg:block opacity-60">
+            <DoodleTacticalArrow size={75} angle={-20} color="#D92525" />
           </div>
-          <div className="absolute top-[58%] right-[24%] hidden lg:block opacity-75">
-            <DoodlePressArrow size={75} angle={15} color="#F4F6FB" />
+          <div className="absolute top-[62%] right-[22%] hidden lg:block opacity-60">
+            <DoodlePressArrow size={70} angle={15} color="#F4F6FB" />
           </div>
         </motion.div>
 
-        {/* ── LAYER 3: FOREGROUND (Fast Sparkles, Coins, Lightning & Coordinate Marks) ── */}
+        {/* ── LAYER 3: FOREGROUND (Fast Sparkles, Lightning & Coordinate Marks) ── */}
         <motion.div 
           style={{ x: fgX, y: fgY }}
-          className="absolute inset-0 pointer-events-none z-10 overflow-hidden"
+          className="absolute inset-0 pointer-events-none z-15 overflow-hidden"
         >
-          {/* Lightning Strikes */}
+          {/* Lightning strikes */}
           <motion.div
-            animate={{ scale: [1, 1.15, 1], opacity: [0.8, 1, 0.8] }}
+            animate={{ scale: [1, 1.15, 1], opacity: [0.7, 1, 0.7] }}
             transition={{ duration: 3, repeat: Infinity }}
-            className="absolute top-28 left-[28%]"
+            className="absolute top-28 left-[24%]"
           >
-            <DoodleLightning size={45} color="#D92525" />
+            <DoodleLightning size={40} color="#D92525" />
           </motion.div>
           <motion.div
-            animate={{ scale: [1, 1.12, 1], opacity: [0.7, 1, 0.7] }}
-            transition={{ duration: 3.5, repeat: Infinity, delay: 1.2 }}
-            className="absolute top-[48%] right-[7%]"
+            animate={{ scale: [1, 1.12, 1], opacity: [0.6, 1, 0.6] }}
+            transition={{ duration: 3.5, repeat: Infinity, delay: 1 }}
+            className="absolute top-[48%] right-[8%]"
           >
-            <DoodleLightning size={40} color="#E8B84B" />
+            <DoodleLightning size={36} color="#E8B84B" />
           </motion.div>
 
-          {/* Sparkles & Coordinate Crosses */}
-          <div className="absolute top-[22%] right-[32%]">
-            <DoodleSparkle size={26} color="#F4F6FB" />
+          {/* Sparkles & crosses */}
+          <div className="absolute top-[22%] right-[28%]">
+            <DoodleSparkle size={22} color="#F4F6FB" />
           </div>
-          <div className="absolute bottom-[44%] left-[16%]">
-            <DoodleSparkle size={22} color="#D92525" />
+          <div className="absolute bottom-[36%] left-[14%]">
+            <DoodleSparkle size={20} color="#D92525" />
           </div>
-          <div className="absolute top-[65%] left-[25%]">
-            <DoodleCross size={20} color="#D92525" />
-          </div>
-          <div className="absolute top-[32%] left-[6%]">
-            <DoodleCross size={22} color="#F4F6FB" />
-          </div>
-          <div className="absolute bottom-[28%] right-[28%]">
-            <DoodleAuction size={55} color="#F4F6FB" />
+          <div className="absolute top-[64%] left-[22%]">
+            <DoodleCross size={18} color="#D92525" />
           </div>
         </motion.div>
 
-        {/* ── CENTER: THE FOOTBALLER (KEY VISUAL ANCHOR) ── */}
-        <div className="relative z-20 flex flex-col items-center justify-center w-full max-w-6xl mx-auto px-4 mt-2">
-          {/* Footballer Composition Box */}
+        {/* ── CENTRAL COMPOSITION CONTAINER (1024x682 Ratio Framework) ── */}
+        <div className="relative w-full max-w-[1440px] mx-auto px-2 sm:px-4 flex items-center justify-center min-h-[640px] md:min-h-[720px]">
+          
+          {/* 1024x682 Aspect Frame for Pixel-Perfect Puppeteer & Plaque Alignment */}
           <motion.div
-            style={{ x: heroX, y: heroY }}
-            initial={{ opacity: 0, scale: 0.92, y: 30 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
-            className="relative flex items-center justify-center"
+            style={{ x: ronaldoX, y: ronaldoY }}
+            initial={{ opacity: 0, scale: 0.96 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
+            className="relative w-full aspect-[1024/682] max-h-[85vh] flex items-center justify-center overflow-hidden rounded-2xl shadow-[0_25px_60px_rgba(0,0,0,0.95)]"
           >
-            {/* Volumetric Battle Crimson Backglow */}
-            <div className="absolute inset-0 rounded-full bg-gradient-to-b from-[#B81D1D]/35 to-transparent blur-[50px] transform scale-110 pointer-events-none" />
+            {/* Base Cinematic Photorealistic Canvas (Ronaldo with puppeteer sticks & stadium) */}
+            <img
+              src="/assets/ronaldo_puppeteer.jpg"
+              alt="Cristiano Ronaldo as Puppeteer — PitchLords / DraftWar"
+              className="absolute inset-0 w-full h-full object-cover object-center pointer-events-none z-10 filter contrast-[1.06] brightness-[1.03]"
+            />
 
-            {/* Tactical Hexagon Halo behind player */}
-            <div className="absolute w-[320px] sm:w-[420px] md:w-[520px] h-[320px] sm:h-[420px] md:h-[520px] rounded-full border-2 border-[#B81D1D]/30 border-dashed animate-[spin_60s_linear_infinite] pointer-events-none" />
+            {/* Subtle Vignette to merge edges cleanly into dark void */}
+            <div className="absolute inset-0 bg-gradient-to-t from-[#050305]/90 via-transparent to-[#050305]/40 pointer-events-none z-15" />
+            <div className="absolute inset-0 bg-gradient-to-r from-[#050305]/60 via-transparent to-[#050305]/60 pointer-events-none z-15" />
 
-            {/* Main Player Cutout Image Container */}
-            <div className="relative w-[280px] sm:w-[380px] md:w-[440px] lg:w-[480px] h-[360px] sm:h-[460px] md:h-[520px] rounded-2xl overflow-hidden shadow-[0_25px_60px_rgba(0,0,0,0.85)] border border-white/10 bg-[#0B1017]">
-              <img
-                src="/assets/hero_footballer.jpg"
-                alt="DraftWar Star Footballer"
-                className="w-full h-full object-cover object-top filter contrast-[1.08] saturate-[1.12]"
-              />
-              {/* Bottom edge gradient vignette blending seamlessly into dark pitch */}
-              <div className="absolute inset-0 bg-gradient-to-t from-[#06090E] via-transparent to-black/20 pointer-events-none" />
-              {/* Crimson edge glow accent */}
-              <div className="absolute inset-0 ring-1 ring-inset ring-[#B81D1D]/40 pointer-events-none" />
-            </div>
+            {/* ── DYNAMIC SVG GLOWING STRINGS OVERLAY ── */}
+            <PuppeteerStrings
+              isLeftHovered={isLeftHovered}
+              isRightHovered={isRightHovered}
+              isLeftActive={isLeftActive}
+              isRightActive={isRightActive}
+              leftDelta={leftDelta}
+              rightDelta={rightDelta}
+            />
 
-            {/* Floating Tactical HUD Badge (Left: Player Rating) */}
-            <motion.div
-              animate={{ y: [0, -6, 0] }}
-              transition={{ duration: 4.5, repeat: Infinity, ease: 'easeInOut' }}
-              className="absolute -left-3 sm:left-4 md:-left-12 bottom-16 sm:bottom-24 z-30 p-3 sm:p-4 rounded-xl bg-[#0B1017]/90 backdrop-blur-md border border-[#B81D1D]/50 shadow-[0_10px_30px_rgba(0,0,0,0.7)]"
+            {/* ── LEFT PRIMARY ACTION: CREATE ROOM PLAQUE BUTTON (PIXEL-PERFECT ALIGNED OVER PLAQUE) ── */}
+            <div 
+              style={{
+                position: 'absolute',
+                left: '12.4%',
+                top: '71.1%',
+                width: '30.7%',
+                height: '15.1%',
+              }}
+              className="z-30 flex items-center justify-center"
             >
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-[#B81D1D] flex items-center justify-center font-display text-2xl font-bold text-white shadow-[0_0_15px_rgba(184,29,29,0.5)]">
-                  94
-                </div>
-                <div>
-                  <div className="font-heading text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
-                    KEY VISUAL <span className="w-1.5 h-1.5 rounded-full bg-[#00E599] animate-ping" />
-                  </div>
-                  <div className="font-mono text-[10px] text-[#8A95A8]">
-                    PAC 95 · SHT 93 · DRI 92
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-
-            {/* Floating Tactical HUD Badge (Right: Match Chemistry) */}
-            <motion.div
-              animate={{ y: [0, 6, 0] }}
-              transition={{ duration: 4.8, repeat: Infinity, ease: 'easeInOut', delay: 0.6 }}
-              className="absolute -right-3 sm:right-4 md:-right-12 top-20 sm:top-28 z-30 p-3 sm:p-4 rounded-xl bg-[#0B1017]/90 backdrop-blur-md border border-white/10 shadow-[0_10px_30px_rgba(0,0,0,0.7)]"
-            >
-              <div className="flex items-center gap-2.5">
-                <Shield className="w-4 h-4 text-[#E8B84B]" />
-                <div>
-                  <div className="font-heading text-xs font-bold text-white uppercase tracking-wider">
-                    CHEMISTRY: 98%
-                  </div>
-                  <div className="font-mono text-[10px] text-[#00E599]">
-                    HIGH PRESS [4-3-3]
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
-
-          {/* ── HERO TYPOGRAPHY & GAME BRANDING ── */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.3 }}
-            className="text-center mt-6 z-30 max-w-3xl"
-          >
-            {/* Primary High-Voltage Game Headline */}
-            <h1 className="font-display text-6xl sm:text-7xl md:text-8xl lg:text-9xl leading-[0.88] tracking-tight text-white uppercase">
-              BID. BUILD. <span className="text-[#B81D1D] drop-shadow-[0_0_25px_rgba(184,29,29,0.5)]">BATTLE.</span>
-            </h1>
-
-            {/* Short Tagline */}
-            <p className="mt-4 font-heading font-medium text-sm sm:text-base md:text-lg text-[#8A95A8] uppercase tracking-widest max-w-2xl mx-auto">
-              Real-time football auction & tactical warfare simulation. Outbid rivals, build your dream XI, and dominate head-to-head matchdays.
-            </p>
-
-            {/* Technical Metadata Bar */}
-            <div className="mt-4 inline-flex items-center gap-3 px-4 py-1.5 rounded-full bg-white/[0.03] border border-white/[0.08] text-[11px] font-mono text-[#8A95A8] uppercase tracking-wider">
-              <span className="flex items-center gap-1.5 text-[#00E599]">
-                <span className="w-2 h-2 rounded-full bg-[#00E599] animate-pulse" />
-                Dixon-Coles Engine
-              </span>
-              <span>//</span>
-              <span>2–4 Managers</span>
-              <span>//</span>
-              <span>120M CP Budget</span>
-            </div>
-
-            {/* =================================================================
-                ONLY TWO PRIMARY ACTIONS (GAME CONTROLS)
-                ================================================================= */}
-            <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4 w-full max-w-md mx-auto">
-              {/* PRIMARY ACTION 1: CREATE ROOM */}
               <motion.button
-                whileHover={{ scale: 1.04 }}
-                whileTap={{ scale: 0.96 }}
+                onMouseEnter={() => {
+                  setIsLeftHovered(true);
+                  setLeftDelta({ x: 0, y: -3 });
+                }}
+                onMouseLeave={() => {
+                  setIsLeftHovered(false);
+                  setIsLeftActive(false);
+                  setLeftDelta({ x: 0, y: 0 });
+                }}
+                onMouseDown={() => {
+                  setIsLeftActive(true);
+                  setLeftDelta({ x: 0, y: 2 });
+                }}
+                onMouseUp={() => {
+                  setIsLeftActive(false);
+                  setLeftDelta({ x: 0, y: -3 });
+                }}
                 onClick={() => setShowCreateModal(true)}
-                className="w-full sm:w-1/2 py-4 px-6 rounded-xl bg-gradient-to-r from-[#B81D1D] to-[#D92525] hover:from-[#D92525] hover:to-[#B81D1D] text-white font-heading font-bold text-lg md:text-xl uppercase tracking-wider flex items-center justify-center gap-3 shadow-[0_0_30px_rgba(184,29,29,0.5)] border border-[#D92525]/60 transition-all cursor-pointer group"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="relative w-full h-full rounded-xl transition-all cursor-pointer group flex items-center justify-center gap-2 sm:gap-3 select-none"
+                style={{
+                  background: isLeftHovered 
+                    ? 'radial-gradient(ellipse at center, rgba(217, 37, 37, 0.25) 0%, rgba(14, 10, 13, 0.6) 100%)' 
+                    : 'transparent',
+                  border: isLeftHovered ? '2px solid #D92525' : '1.5px solid transparent',
+                  boxShadow: isLeftHovered 
+                    ? '0 0 35px rgba(217, 37, 37, 0.75), inset 0 0 15px rgba(217, 37, 37, 0.35)' 
+                    : 'none',
+                }}
               >
-                <Flame className="w-5 h-5 text-white animate-pulse" />
-                <span>CREATE ROOM</span>
-                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-              </motion.button>
-
-              {/* PRIMARY ACTION 2: ENTER ROOM */}
-              <motion.button
-                whileHover={{ scale: 1.04 }}
-                whileTap={{ scale: 0.96 }}
-                onClick={() => setShowJoinModal(true)}
-                className="w-full sm:w-1/2 py-4 px-6 rounded-xl bg-[#0B1017] hover:bg-[#B81D1D]/15 text-white font-heading font-bold text-lg md:text-xl uppercase tracking-wider flex items-center justify-center gap-3 border-2 border-[#D92525]/60 hover:border-[#D92525] transition-all cursor-pointer group"
-              >
-                <Hash className="w-5 h-5 text-[#D92525]" />
-                <span>ENTER ROOM</span>
-                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 text-[#8A95A8] group-hover:text-white transition-all" />
+                {/* Visual hover flare & active pulse */}
+                {isLeftHovered && (
+                  <div className="absolute inset-0 rounded-xl ring-2 ring-[#D92525] ring-opacity-80 animate-pulse pointer-events-none" />
+                )}
               </motion.button>
             </div>
+
+            {/* ── RIGHT PRIMARY ACTION: JOIN ROOM PLAQUE BUTTON (PIXEL-PERFECT ALIGNED OVER PLAQUE) ── */}
+            <div 
+              style={{
+                position: 'absolute',
+                left: '56.9%',
+                top: '71.1%',
+                width: '30.7%',
+                height: '15.1%',
+              }}
+              className="z-30 flex items-center justify-center"
+            >
+              <motion.button
+                onMouseEnter={() => {
+                  setIsRightHovered(true);
+                  setRightDelta({ x: 0, y: -3 });
+                }}
+                onMouseLeave={() => {
+                  setIsRightHovered(false);
+                  setIsRightActive(false);
+                  setRightDelta({ x: 0, y: 0 });
+                }}
+                onMouseDown={() => {
+                  setIsRightActive(true);
+                  setRightDelta({ x: 0, y: 2 });
+                }}
+                onMouseUp={() => {
+                  setIsRightActive(false);
+                  setRightDelta({ x: 0, y: -3 });
+                }}
+                onClick={() => setShowJoinModal(true)}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="relative w-full h-full rounded-xl transition-all cursor-pointer group flex items-center justify-center gap-2 sm:gap-3 select-none"
+                style={{
+                  background: isRightHovered 
+                    ? 'radial-gradient(ellipse at center, rgba(217, 37, 37, 0.25) 0%, rgba(14, 10, 13, 0.6) 100%)' 
+                    : 'transparent',
+                  border: isRightHovered ? '2px solid #D92525' : '1.5px solid transparent',
+                  boxShadow: isRightHovered 
+                    ? '0 0 35px rgba(217, 37, 37, 0.75), inset 0 0 15px rgba(217, 37, 37, 0.35)' 
+                    : 'none',
+                }}
+              >
+                {/* Visual hover flare & active pulse */}
+                {isRightHovered && (
+                  <div className="absolute inset-0 rounded-xl ring-2 ring-[#D92525] ring-opacity-80 animate-pulse pointer-events-none" />
+                )}
+              </motion.button>
+            </div>
+
+            {/* ── BOTTOM EDITORIAL STRIP: "GREAT MANAGERS MAKE GREATER STORIES." ── */}
+            <div className="absolute bottom-[2%] left-0 right-0 z-20 text-center pointer-events-none">
+              <span className="font-mono text-[9px] sm:text-[11px] text-[#8A95A8] tracking-[0.28em] uppercase flex items-center justify-center gap-2">
+                GREAT MANAGERS MAKE GREATER STORIES.
+              </span>
+              <div className="w-8 h-0.5 bg-[#D92525] mx-auto mt-1.5 opacity-80" />
+            </div>
+
           </motion.div>
         </div>
+
       </section>
 
       {/* =====================================================================
-          SECTION 2: ONBOARDING / HOW TO PLAY (COMPACT 5-STEP GAME LOOP)
+          3. SECTION 2: COMPACT HOW-TO-PLAY GAME LOOP STRIP
           ===================================================================== */}
-      <section id="how-to-play" className="relative w-full py-20 px-6 md:px-12 border-t border-white/[0.08] bg-[#080C12]">
+      <section id="how-to-play" className="relative w-full py-16 px-6 md:px-12 border-t border-white/[0.08] bg-[#070508]">
         <div className="max-w-7xl mx-auto">
           {/* Section Header */}
-          <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-4">
+          <div className="flex flex-col md:flex-row md:items-end justify-between mb-10 gap-4">
             <div>
-              <div className="font-mono text-xs text-[#B81D1D] uppercase tracking-widest font-bold mb-2 flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-[#B81D1D]" />
-                THE GAMEPLAY LOOP
+              <div className="font-mono text-xs text-[#D92525] uppercase tracking-[0.25em] font-bold mb-2 flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-[#D92525] animate-pulse" />
+                THE MATCHDAY LOOP
               </div>
-              <h2 className="font-display text-4xl sm:text-5xl md:text-6xl text-white tracking-tight leading-none">
-                HOW TO PLAY <span className="text-[#B81D1D]">DRAFTWAR</span>
+              <h2 className="font-editorial text-3xl sm:text-4xl md:text-5xl text-white tracking-tight leading-none uppercase">
+                HOW TO PLAY <span className="text-[#D92525]">DRAFTWAR</span>
               </h2>
             </div>
-            <p className="font-heading text-sm md:text-base text-[#8A95A8] uppercase tracking-wider max-w-md">
+            <p className="font-mono text-xs md:text-sm text-[#8A95A8] uppercase tracking-wider max-w-md">
               From room setup to the winner's podium in 15 intense match minutes.
             </p>
           </div>
@@ -549,116 +539,116 @@ export function LandingPage() {
           {/* 5-Step Compact Card Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
             {/* STEP 01 */}
-            <div className="p-6 rounded-2xl bg-[#0B1017] border border-white/[0.07] hover:border-[#B81D1D]/50 transition-all flex flex-col justify-between group">
+            <div className="p-5 rounded-2xl bg-[#0E0A0D] border border-white/[0.08] hover:border-[#D92525]/60 transition-all flex flex-col justify-between group">
               <div>
-                <div className="flex items-center justify-between mb-4">
-                  <span className="font-display text-3xl font-bold text-[#B81D1D] group-hover:text-[#D92525] transition-colors">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="font-editorial text-3xl font-bold text-[#D92525]">
                     01
                   </span>
-                  <div className="w-8 h-8 rounded-lg bg-[#B81D1D]/10 flex items-center justify-center text-[#B81D1D]">
+                  <div className="w-8 h-8 rounded-lg bg-[#B81D1D]/15 flex items-center justify-center text-[#D92525]">
                     <Users className="w-4 h-4" />
                   </div>
                 </div>
-                <h3 className="font-heading text-lg font-bold text-white uppercase tracking-wide mb-2">
+                <h3 className="font-editorial text-base font-bold text-white uppercase tracking-wider mb-1.5">
                   ENTER ROOM
                 </h3>
                 <p className="text-xs text-[#8A95A8] leading-relaxed">
                   Host a war room or enter with a 6-character code. Go head-to-head with 2 to 4 managers.
                 </p>
               </div>
-              <div className="mt-6 pt-4 border-t border-white/[0.05] font-mono text-[10px] text-[#8A95A8] uppercase">
+              <div className="mt-4 pt-3 border-t border-white/[0.05] font-mono text-[10px] text-[#8A95A8] uppercase">
                 Step 1 of 5
               </div>
             </div>
 
             {/* STEP 02 */}
-            <div className="p-6 rounded-2xl bg-[#0B1017] border border-white/[0.07] hover:border-[#B81D1D]/50 transition-all flex flex-col justify-between group">
+            <div className="p-5 rounded-2xl bg-[#0E0A0D] border border-white/[0.08] hover:border-[#D92525]/60 transition-all flex flex-col justify-between group">
               <div>
-                <div className="flex items-center justify-between mb-4">
-                  <span className="font-display text-3xl font-bold text-[#B81D1D] group-hover:text-[#D92525] transition-colors">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="font-editorial text-3xl font-bold text-[#D92525]">
                     02
                   </span>
-                  <div className="w-8 h-8 rounded-lg bg-[#B81D1D]/10 flex items-center justify-center text-[#B81D1D]">
+                  <div className="w-8 h-8 rounded-lg bg-[#B81D1D]/15 flex items-center justify-center text-[#D92525]">
                     <Zap className="w-4 h-4" />
                   </div>
                 </div>
-                <h3 className="font-heading text-lg font-bold text-white uppercase tracking-wide mb-2">
+                <h3 className="font-editorial text-base font-bold text-white uppercase tracking-wider mb-1.5">
                   BID FOR PLAYERS
                 </h3>
                 <p className="text-xs text-[#8A95A8] leading-relaxed">
                   Live 10-second auction floor. Manage your 120M CP budget and outbid rivals under clock pressure.
                 </p>
               </div>
-              <div className="mt-6 pt-4 border-t border-white/[0.05] font-mono text-[10px] text-[#8A95A8] uppercase">
+              <div className="mt-4 pt-3 border-t border-white/[0.05] font-mono text-[10px] text-[#8A95A8] uppercase">
                 Step 2 of 5
               </div>
             </div>
 
             {/* STEP 03 */}
-            <div className="p-6 rounded-2xl bg-[#0B1017] border border-white/[0.07] hover:border-[#B81D1D]/50 transition-all flex flex-col justify-between group">
+            <div className="p-5 rounded-2xl bg-[#0E0A0D] border border-white/[0.08] hover:border-[#D92525]/60 transition-all flex flex-col justify-between group">
               <div>
-                <div className="flex items-center justify-between mb-4">
-                  <span className="font-display text-3xl font-bold text-[#B81D1D] group-hover:text-[#D92525] transition-colors">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="font-editorial text-3xl font-bold text-[#D92525]">
                     03
                   </span>
-                  <div className="w-8 h-8 rounded-lg bg-[#B81D1D]/10 flex items-center justify-center text-[#B81D1D]">
+                  <div className="w-8 h-8 rounded-lg bg-[#B81D1D]/15 flex items-center justify-center text-[#D92525]">
                     <Shield className="w-4 h-4" />
                   </div>
                 </div>
-                <h3 className="font-heading text-lg font-bold text-white uppercase tracking-wide mb-2">
+                <h3 className="font-editorial text-base font-bold text-white uppercase tracking-wider mb-1.5">
                   BUILD YOUR XI
                 </h3>
                 <p className="text-xs text-[#8A95A8] leading-relaxed">
                   Choose your formation (4-3-3, 3-5-2). Position drafted stars to maximize club and national chemistry.
                 </p>
               </div>
-              <div className="mt-6 pt-4 border-t border-white/[0.05] font-mono text-[10px] text-[#8A95A8] uppercase">
+              <div className="mt-4 pt-3 border-t border-white/[0.05] font-mono text-[10px] text-[#8A95A8] uppercase">
                 Step 3 of 5
               </div>
             </div>
 
             {/* STEP 04 */}
-            <div className="p-6 rounded-2xl bg-[#0B1017] border border-white/[0.07] hover:border-[#B81D1D]/50 transition-all flex flex-col justify-between group">
+            <div className="p-5 rounded-2xl bg-[#0E0A0D] border border-white/[0.08] hover:border-[#D92525]/60 transition-all flex flex-col justify-between group">
               <div>
-                <div className="flex items-center justify-between mb-4">
-                  <span className="font-display text-3xl font-bold text-[#B81D1D] group-hover:text-[#D92525] transition-colors">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="font-editorial text-3xl font-bold text-[#D92525]">
                     04
                   </span>
-                  <div className="w-8 h-8 rounded-lg bg-[#B81D1D]/10 flex items-center justify-center text-[#B81D1D]">
+                  <div className="w-8 h-8 rounded-lg bg-[#B81D1D]/15 flex items-center justify-center text-[#D92525]">
                     <Flame className="w-4 h-4" />
                   </div>
                 </div>
-                <h3 className="font-heading text-lg font-bold text-white uppercase tracking-wide mb-2">
+                <h3 className="font-editorial text-base font-bold text-white uppercase tracking-wider mb-1.5">
                   BATTLE
                 </h3>
                 <p className="text-xs text-[#8A95A8] leading-relaxed">
                   Live minute-by-minute tactical simulation. Track xG, dynamic fouls, and dramatic clutch goals.
                 </p>
               </div>
-              <div className="mt-6 pt-4 border-t border-white/[0.05] font-mono text-[10px] text-[#8A95A8] uppercase">
+              <div className="mt-4 pt-3 border-t border-white/[0.05] font-mono text-[10px] text-[#8A95A8] uppercase">
                 Step 4 of 5
               </div>
             </div>
 
             {/* STEP 05 */}
-            <div className="p-6 rounded-2xl bg-[#0B1017] border border-white/[0.07] hover:border-[#B81D1D]/50 transition-all flex flex-col justify-between group">
+            <div className="p-5 rounded-2xl bg-[#0E0A0D] border border-white/[0.08] hover:border-[#E8B84B]/60 transition-all flex flex-col justify-between group">
               <div>
-                <div className="flex items-center justify-between mb-4">
-                  <span className="font-display text-3xl font-bold text-[#E8B84B]">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="font-editorial text-3xl font-bold text-[#E8B84B]">
                     05
                   </span>
-                  <div className="w-8 h-8 rounded-lg bg-[#E8B84B]/10 flex items-center justify-center text-[#E8B84B]">
+                  <div className="w-8 h-8 rounded-lg bg-[#E8B84B]/15 flex items-center justify-center text-[#E8B84B]">
                     <Trophy className="w-4 h-4" />
                   </div>
                 </div>
-                <h3 className="font-heading text-lg font-bold text-white uppercase tracking-wide mb-2">
+                <h3 className="font-editorial text-base font-bold text-white uppercase tracking-wider mb-1.5">
                   CLAIM THE CROWN
                 </h3>
                 <p className="text-xs text-[#8A95A8] leading-relaxed">
                   Find out which manager built the superior XI. Gain ELO rating points and unlock legendary accolades.
                 </p>
               </div>
-              <div className="mt-6 pt-4 border-t border-white/[0.05] font-mono text-[10px] text-[#E8B84B] uppercase">
+              <div className="mt-4 pt-3 border-t border-white/[0.05] font-mono text-[10px] text-[#E8B84B] uppercase">
                 Step 5 of 5
               </div>
             </div>
@@ -667,9 +657,9 @@ export function LandingPage() {
       </section>
 
       {/* =====================================================================
-          SECTION 3: MINIMAL TECHNICAL FOOTER (1 COMPACT STATUS BAR)
+          4. SECTION 3: MINIMAL TECHNICAL FOOTER
           ===================================================================== */}
-      <footer className="w-full py-6 px-6 md:px-12 border-t border-white/[0.08] bg-[#06090E] flex flex-col sm:flex-row items-center justify-between gap-4">
+      <footer className="w-full py-6 px-6 md:px-12 border-t border-white/[0.08] bg-[#050305] flex flex-col sm:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="w-2 h-2 rounded-full bg-[#00E599] animate-ping" />
           <span className="font-mono text-xs text-[#8A95A8]">
@@ -677,8 +667,8 @@ export function LandingPage() {
           </span>
         </div>
 
-        <div className="font-mono text-xs text-[#8A95A8] uppercase tracking-wider">
-          DRAFTWAR BUILD v2.4.0 · BATTLE CRIMSON EDITION
+        <div className="font-mono text-xs text-[#8A95A8] uppercase tracking-[0.2em]">
+          PITCHLORDS · DRAFTWAR ENGINE v2.4.0 · BATTLE CRIMSON
         </div>
 
         <div className="flex items-center gap-4">
@@ -686,20 +676,20 @@ export function LandingPage() {
             onClick={() => setSoundEnabled(!soundEnabled)}
             className="flex items-center gap-1.5 font-mono text-xs text-[#8A95A8] hover:text-white transition-colors"
           >
-            {soundEnabled ? <Volume2 className="w-3.5 h-3.5 text-[#B81D1D]" /> : <VolumeX className="w-3.5 h-3.5" />}
+            {soundEnabled ? <Volume2 className="w-3.5 h-3.5 text-[#D92525]" /> : <VolumeX className="w-3.5 h-3.5" />}
             <span>SFX {soundEnabled ? 'ON' : 'OFF'}</span>
           </button>
           <button 
             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
             className="font-mono text-xs text-[#8A95A8] hover:text-white uppercase transition-colors"
           >
-            ↑ Top
+            ↑ TOP
           </button>
         </div>
       </footer>
 
       {/* =====================================================================
-          MODAL 1: CREATE ROOM
+          MODAL 1: CREATE MATCH ROOM
           ===================================================================== */}
       <AnimatePresence>
         {showCreateModal && (
@@ -708,19 +698,19 @@ export function LandingPage() {
               initial={{ scale: 0.94, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.94, opacity: 0 }}
-              className="w-full max-w-lg rounded-2xl bg-[#0B1017] border border-[#B81D1D]/50 shadow-[0_20px_50px_rgba(184,29,29,0.3)] overflow-hidden"
+              className="w-full max-w-lg rounded-2xl bg-[#0E0A0D] border border-[#D92525]/60 shadow-[0_20px_50px_rgba(217,37,37,0.35)] overflow-hidden"
             >
               {/* Header */}
               <div className="px-6 py-4 border-b border-white/[0.08] flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
-                  <Flame className="w-5 h-5 text-[#B81D1D]" />
-                  <span className="font-heading font-bold text-lg text-white uppercase tracking-wider">
+                  <Flame className="w-5 h-5 text-[#D92525]" />
+                  <span className="font-editorial font-bold text-lg text-white uppercase tracking-wider">
                     CREATE MATCH ROOM
                   </span>
                 </div>
                 <button
                   onClick={() => setShowCreateModal(false)}
-                  className="p-1 rounded-lg text-[#8A95A8] hover:text-white hover:bg-white/[0.08] transition-colors"
+                  className="p-1 rounded-lg text-[#8A95A8] hover:text-white hover:bg-white/[0.08] transition-colors cursor-pointer"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -739,7 +729,7 @@ export function LandingPage() {
                       placeholder="e.g. Tactician_07"
                       value={guestManagerName}
                       onChange={e => setGuestManagerName(e.target.value)}
-                      className="w-full px-4 py-3 rounded-xl bg-[#06090E] border border-white/[0.1] text-white font-mono text-sm focus:border-[#B81D1D] focus:outline-none"
+                      className="w-full px-4 py-3 rounded-xl bg-[#050305] border border-white/[0.1] text-white font-mono text-sm focus:border-[#D92525] focus:outline-none"
                     />
                   </div>
                 )}
@@ -754,14 +744,14 @@ export function LandingPage() {
                       <button
                         key={ed.slug}
                         onClick={() => setCreateEdition(ed.slug)}
-                        className={`p-3 rounded-xl text-left border transition-all ${
+                        className={`p-3 rounded-xl text-left border transition-all cursor-pointer ${
                           createEdition === ed.slug
-                            ? 'bg-[#B81D1D]/20 border-[#B81D1D] shadow-[0_0_15px_rgba(184,29,29,0.3)]'
-                            : 'bg-[#121824] border-white/[0.06] hover:border-white/20'
+                            ? 'bg-[#B81D1D]/25 border-[#D92525] shadow-[0_0_15px_rgba(217,37,37,0.35)]'
+                            : 'bg-[#140E13] border-white/[0.06] hover:border-white/20'
                         }`}
                       >
                         <div className="text-xl mb-1">{ed.icon}</div>
-                        <div className="font-heading font-bold text-sm text-white uppercase">
+                        <div className="font-editorial font-bold text-sm text-white uppercase">
                           {ed.name}
                         </div>
                         <div className="font-mono text-[10px] text-[#8A95A8]">
@@ -781,10 +771,10 @@ export function LandingPage() {
                     <select
                       value={createBudget}
                       onChange={e => setCreateBudget(Number(e.target.value))}
-                      className="w-full px-3 py-2.5 rounded-xl bg-[#06090E] border border-white/[0.1] text-white font-mono text-sm focus:border-[#B81D1D] focus:outline-none"
+                      className="w-full px-3 py-2.5 rounded-xl bg-[#050305] border border-white/[0.1] text-white font-mono text-sm focus:border-[#D92525] focus:outline-none"
                     >
                       <option value={100}>100M CP</option>
-                      <option value={120}>120M CP (Default)</option>
+                      <option value={120}>120M CP (Standard)</option>
                       <option value={150}>150M CP (Galactico)</option>
                     </select>
                   </div>
@@ -796,7 +786,7 @@ export function LandingPage() {
                     <select
                       value={createTimer}
                       onChange={e => setCreateTimer(Number(e.target.value) as 8 | 10 | 15)}
-                      className="w-full px-3 py-2.5 rounded-xl bg-[#06090E] border border-white/[0.1] text-white font-mono text-sm focus:border-[#B81D1D] focus:outline-none"
+                      className="w-full px-3 py-2.5 rounded-xl bg-[#050305] border border-white/[0.1] text-white font-mono text-sm focus:border-[#D92525] focus:outline-none"
                     >
                       <option value={8}>8s (Blitz)</option>
                       <option value={10}>10s (Standard)</option>
@@ -815,10 +805,10 @@ export function LandingPage() {
                       <button
                         key={num}
                         onClick={() => setCreateMaxPlayers(num)}
-                        className={`py-2 rounded-lg font-mono text-xs font-bold transition-all ${
+                        className={`py-2 rounded-lg font-mono text-xs font-bold transition-all cursor-pointer ${
                           createMaxPlayers === num
-                            ? 'bg-[#B81D1D] text-white'
-                            : 'bg-[#121824] text-[#8A95A8] hover:text-white border border-white/[0.06]'
+                            ? 'bg-[#D92525] text-white'
+                            : 'bg-[#140E13] text-[#8A95A8] hover:text-white border border-white/[0.06]'
                         }`}
                       >
                         {num} Managers
@@ -828,22 +818,22 @@ export function LandingPage() {
                 </div>
 
                 {createError && (
-                  <div className="p-3 rounded-lg bg-[#B81D1D]/20 border border-[#B81D1D] text-xs font-mono text-[#D92525]">
+                  <div className="p-3 rounded-lg bg-[#B81D1D]/20 border border-[#D92525] text-xs font-mono text-[#D92525]">
                     {createError}
                   </div>
                 )}
 
-                {/* Action Submit */}
+                {/* Submit Action */}
                 <button
                   onClick={handleCreateRoom}
                   disabled={isCreating}
-                  className="w-full py-4 rounded-xl bg-gradient-to-r from-[#B81D1D] to-[#D92525] hover:from-[#D92525] hover:to-[#B81D1D] text-white font-heading font-bold text-lg uppercase tracking-wider shadow-[0_0_20px_rgba(184,29,29,0.5)] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                  className="w-full py-4 rounded-xl bg-gradient-to-r from-[#B81D1D] to-[#D92525] hover:from-[#D92525] hover:to-[#B81D1D] text-white font-editorial font-bold text-lg uppercase tracking-wider shadow-[0_0_25px_rgba(217,37,37,0.5)] transition-all disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
                 >
                   {isCreating ? (
-                    <span>INITIALIZING WAR ROOM...</span>
+                    <span>COMMISSIONING WAR ROOM...</span>
                   ) : (
                     <>
-                      <span>LAUNCH ROOM</span>
+                      <span>LAUNCH MATCH ROOM</span>
                       <ArrowRight className="w-5 h-5" />
                     </>
                   )}
@@ -864,19 +854,19 @@ export function LandingPage() {
               initial={{ scale: 0.94, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.94, opacity: 0 }}
-              className="w-full max-w-md rounded-2xl bg-[#0B1017] border border-[#D92525]/60 shadow-[0_20px_50px_rgba(184,29,29,0.3)] overflow-hidden"
+              className="w-full max-w-md rounded-2xl bg-[#0E0A0D] border border-[#D92525]/60 shadow-[0_20px_50px_rgba(217,37,37,0.35)] overflow-hidden"
             >
               {/* Header */}
               <div className="px-6 py-4 border-b border-white/[0.08] flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
                   <Hash className="w-5 h-5 text-[#D92525]" />
-                  <span className="font-heading font-bold text-lg text-white uppercase tracking-wider">
+                  <span className="font-editorial font-bold text-lg text-white uppercase tracking-wider">
                     ENTER ROOM CODE
                   </span>
                 </div>
                 <button
                   onClick={() => setShowJoinModal(false)}
-                  className="p-1 rounded-lg text-[#8A95A8] hover:text-white hover:bg-white/[0.08] transition-colors"
+                  className="p-1 rounded-lg text-[#8A95A8] hover:text-white hover:bg-white/[0.08] transition-colors cursor-pointer"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -898,12 +888,12 @@ export function LandingPage() {
                       setJoinError('');
                     }}
                     autoFocus
-                    className="w-full px-4 py-4 rounded-xl bg-[#06090E] border-2 border-white/[0.1] focus:border-[#D92525] text-white text-center font-mono font-bold text-2xl tracking-[0.3em] uppercase focus:outline-none shadow-inner"
+                    className="w-full px-4 py-4 rounded-xl bg-[#050305] border-2 border-white/[0.1] focus:border-[#D92525] text-white text-center font-mono font-bold text-2xl tracking-[0.3em] uppercase focus:outline-none shadow-inner"
                   />
                 </div>
 
                 {joinError && (
-                  <div className="p-3 rounded-lg bg-[#B81D1D]/20 border border-[#B81D1D] text-xs font-mono text-[#D92525] text-center">
+                  <div className="p-3 rounded-lg bg-[#B81D1D]/20 border border-[#D92525] text-xs font-mono text-[#D92525] text-center">
                     {joinError}
                   </div>
                 )}
@@ -911,12 +901,85 @@ export function LandingPage() {
                 <button
                   type="submit"
                   disabled={joinCode.trim().length !== 6}
-                  className="w-full py-4 rounded-xl bg-gradient-to-r from-[#B81D1D] to-[#D92525] hover:from-[#D92525] hover:to-[#B81D1D] disabled:opacity-40 text-white font-heading font-bold text-lg uppercase tracking-wider shadow-[0_0_20px_rgba(184,29,29,0.5)] transition-all flex items-center justify-center gap-2"
+                  className="w-full py-4 rounded-xl bg-gradient-to-r from-[#B81D1D] to-[#D92525] hover:from-[#D92525] hover:to-[#B81D1D] disabled:opacity-40 text-white font-editorial font-bold text-lg uppercase tracking-wider shadow-[0_0_20px_rgba(217,37,37,0.5)] transition-all flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <span>CONNECT TO MATCH</span>
                   <ArrowRight className="w-5 h-5" />
                 </button>
               </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* =====================================================================
+          MODAL 3: HOW TO PLAY MODAL
+          ===================================================================== */}
+      <AnimatePresence>
+        {showHowToPlay && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
+            <motion.div
+              initial={{ scale: 0.94, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.94, opacity: 0 }}
+              className="w-full max-w-2xl rounded-2xl bg-[#0E0A0D] border border-[#D92525]/60 shadow-[0_20px_50px_rgba(217,37,37,0.35)] overflow-hidden"
+            >
+              <div className="px-6 py-4 border-b border-white/[0.08] flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <Trophy className="w-5 h-5 text-[#E8B84B]" />
+                  <span className="font-editorial font-bold text-lg text-white uppercase tracking-wider">
+                    HOW TO PLAY DRAFTWAR
+                  </span>
+                </div>
+                <button
+                  onClick={() => setShowHowToPlay(false)}
+                  className="p-1 rounded-lg text-[#8A95A8] hover:text-white hover:bg-white/[0.08] transition-colors cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+                <div className="p-4 rounded-xl bg-[#140E13] border border-white/10 flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-[#D92525]/20 text-[#D92525] flex items-center justify-center font-bold">1</div>
+                  <div>
+                    <h4 className="font-editorial font-bold text-white uppercase text-sm">Enter Room</h4>
+                    <p className="text-xs text-[#8A95A8] mt-0.5">Host a war room or enter via a 6-character room code with 2 to 4 managers.</p>
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-xl bg-[#140E13] border border-white/10 flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-[#D92525]/20 text-[#D92525] flex items-center justify-center font-bold">2</div>
+                  <div>
+                    <h4 className="font-editorial font-bold text-white uppercase text-sm">Live Player Auction</h4>
+                    <p className="text-xs text-[#8A95A8] mt-0.5">Rapid-fire 10-second bidding. Balance your 120M CP budget against rival managers.</p>
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-xl bg-[#140E13] border border-white/10 flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-[#D92525]/20 text-[#D92525] flex items-center justify-center font-bold">3</div>
+                  <div>
+                    <h4 className="font-editorial font-bold text-white uppercase text-sm">Build Your Tactical XI</h4>
+                    <p className="text-xs text-[#8A95A8] mt-0.5">Slot acquired players into 4-3-3, 3-5-2, or 4-2-3-1 formations to trigger club and national chemistry bonuses.</p>
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-xl bg-[#140E13] border border-white/10 flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-[#D92525]/20 text-[#D92525] flex items-center justify-center font-bold">4</div>
+                  <div>
+                    <h4 className="font-editorial font-bold text-white uppercase text-sm">Minute-By-Minute Match Battle</h4>
+                    <p className="text-xs text-[#8A95A8] mt-0.5">Watch the Dixon-Coles simulation simulate 90 minutes of authentic football with dynamic goals, saves, and cards.</p>
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-xl bg-[#140E13] border border-white/10 flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-[#E8B84B]/20 text-[#E8B84B] flex items-center justify-center font-bold">5</div>
+                  <div>
+                    <h4 className="font-editorial font-bold text-white uppercase text-sm">Claim The Crown</h4>
+                    <p className="text-xs text-[#8A95A8] mt-0.5">Gain competitive ELO rating points, earn managerial accolades, and dominate the global rankings.</p>
+                  </div>
+                </div>
+              </div>
             </motion.div>
           </div>
         )}

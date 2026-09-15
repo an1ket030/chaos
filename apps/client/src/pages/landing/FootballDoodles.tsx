@@ -465,3 +465,50 @@ export const DoodleCross: React.FC<DoodleProps> = ({ className = '', color = '#D
     <path d="M15 4 L15 26 M4 15 L26 15" stroke={color} strokeWidth="2.5" strokeLinecap="round" />
   </svg>
 );
+
+// Iconic Pitch Lords / Game Crown emblem
+export const DoodlePitchCrown: React.FC<DoodleProps> = ({ className = '', color = '#D92525', size = 38 }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 48 40"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    className={className}
+  >
+    {/* Crown 3-pointed shape */}
+    <path
+      d="M6 24 L10 8 L24 16 L38 8 L42 24 Z"
+      stroke={color}
+      strokeWidth="2.5"
+      strokeLinejoin="round"
+      strokeLinecap="round"
+      fill="none"
+    />
+    {/* Double horizontal base bars */}
+    <line x1="8" y1="28" x2="40" y2="28" stroke={color} strokeWidth="2.5" strokeLinecap="round" />
+    <line x1="12" y1="33" x2="36" y2="33" stroke={color} strokeWidth="2" strokeLinecap="round" />
+  </svg>
+);
+
+// CR7 Iconic Number 7 sketch
+export const DoodleNumber7: React.FC<DoodleProps> = ({ className = '', color = '#F4F6FB', size = 48 }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 50 60"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    className={className}
+  >
+    <path
+      d="M8 12 L42 12 L22 52"
+      stroke={color}
+      strokeWidth="4"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <line x1="16" y1="32" x2="32" y2="32" stroke="#D92525" strokeWidth="3" strokeLinecap="round" />
+  </svg>
+);
+
