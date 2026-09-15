@@ -129,6 +129,17 @@ OVERALL ROADMAP:  [======--------------------------] 21% (18/86 Total Milestones
   - Built interactive 7-chapter storytelling Landing Page (`/`) featuring live interactive Bidding Arena demo (+5 CP clicks against AI counter-bidders and chaos triggers) and interactive tactical pitch.
   - Sourced and integrated high-resolution hero player and striker cutouts with zero generic placeholders.
   - Overhauled Login and Register into cohesive sports-editorial poster layouts with quick 1-click test credentials.
+- [x] **Puppeteer of Football 100% Scratch Landing Page Rebuild** (`LandingPage.tsx`, `StadiumEnvironment.tsx`, `PuppeteerRods.tsx`, `PuppeteerStrings.tsx`, `PlaqueButton.tsx`, `CentralFootballer.tsx`, `FootballDoodles.tsx`)
+  - Permanently removed reference image asset (`ronaldo_puppeteer.jpg`) from codebase and runtime.
+  - Rebuilt the entire Puppeteer theme from scratch using modular React + SVG + CSS components:
+    - Layer 1 (`z-0`): `StadiumEnvironment` with fluted stone pillars, arena banners, floodlight beams, and specular wet pitch reflection.
+    - Layer 2 (`z-5` to `z-12`): Multi-layer cursor-parallax `FootballDoodles` (boots, trophies, crowns, tactical blips, jersey #7).
+    - Layer 3 (`z-15`): `CentralFootballer` with glowing crimson rim aura, tactical chemistry HUD, and archetype badge.
+    - Layer 4 (`z-20`): `PuppeteerRods` with mahogany wooden crossbars, center joint, and brass suspension eyelets.
+    - Layer 5 (`z-25`): `PuppeteerStrings` with realtime glowing crimson SVG strings connecting rods to plaque rings with spring tension physics.
+    - Layer 6 (`z-30`): `PlaqueButton`s for `CREATE ROOM` and `JOIN ROOM` styled as beveled dark stone plaques with suspension rings, tactile hover elevation, and direct modal popups.
+  - Full functional integrity: Create Match Room, Join Room, and How To Play modals fully operational.
+
 
 #### 1.8 Database, Progression & Architecture
 - [x] **PostgreSQL Match Persistence** (`apps/server/src/modules/match/match.service.ts`)

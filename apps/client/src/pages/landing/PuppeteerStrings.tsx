@@ -18,46 +18,46 @@ export const PuppeteerStrings: React.FC<StringsProps> = ({
   leftDelta = { x: 0, y: 0 },
   rightDelta = { x: 0, y: 0 },
 }) => {
-  // Left crossbar attachment points (in 1024x682 coordinate space)
+  // Left crossbar attachment points (in 1000x650 coordinate space)
   const leftBarPoints = [
-    { x: 166, y: 275 }, // outer left
-    { x: 208, y: 271 }, // inner left
-    { x: 318, y: 269 }, // inner right
-    { x: 356, y: 273 }, // outer right
+    { x: 175, y: 256 },
+    { x: 215, y: 256 },
+    { x: 285, y: 256 },
+    { x: 325, y: 256 },
   ];
 
   // Left button top eyelet attachment points
   const leftEyelets = [
-    { x: 166 + leftDelta.x, y: 486 + leftDelta.y },
-    { x: 208 + leftDelta.x, y: 485 + leftDelta.y },
-    { x: 318 + leftDelta.x, y: 485 + leftDelta.y },
-    { x: 356 + leftDelta.x, y: 486 + leftDelta.y },
+    { x: 160 + leftDelta.x, y: 456 + leftDelta.y },
+    { x: 210 + leftDelta.x, y: 456 + leftDelta.y },
+    { x: 310 + leftDelta.x, y: 456 + leftDelta.y },
+    { x: 360 + leftDelta.x, y: 456 + leftDelta.y },
   ];
 
   // Right crossbar attachment points
   const rightBarPoints = [
-    { x: 672, y: 273 }, // outer left
-    { x: 710, y: 269 }, // inner left
-    { x: 820, y: 271 }, // inner right
-    { x: 862, y: 275 }, // outer right
+    { x: 675, y: 256 },
+    { x: 715, y: 256 },
+    { x: 785, y: 256 },
+    { x: 825, y: 256 },
   ];
 
   // Right button top eyelet attachment points
   const rightEyelets = [
-    { x: 672 + rightDelta.x, y: 486 + rightDelta.y },
-    { x: 710 + rightDelta.x, y: 485 + rightDelta.y },
-    { x: 820 + rightDelta.x, y: 485 + rightDelta.y },
-    { x: 862 + rightDelta.x, y: 486 + rightDelta.y },
+    { x: 640 + rightDelta.x, y: 456 + rightDelta.y },
+    { x: 690 + rightDelta.x, y: 456 + rightDelta.y },
+    { x: 790 + rightDelta.x, y: 456 + rightDelta.y },
+    { x: 840 + rightDelta.x, y: 456 + rightDelta.y },
   ];
 
-  // Calculate sag / curvature: less sag when hovered or active
-  const leftSag = isLeftActive ? 0 : isLeftHovered ? 1.5 : 4;
-  const rightSag = isRightActive ? 0 : isRightHovered ? 1.5 : 4;
+  // Calculate sag: straightens when hovered or active
+  const leftSag = isLeftActive ? 0 : isLeftHovered ? 1 : 3.5;
+  const rightSag = isRightActive ? 0 : isRightHovered ? 1 : 3.5;
 
   return (
     <svg
-      viewBox="0 0 1024 682"
-      preserveAspectRatio="xMidYMid meet"
+      viewBox="0 0 1000 650"
+      preserveAspectRatio="none"
       className="absolute inset-0 w-full h-full pointer-events-none z-25 overflow-visible"
     >
       <defs>
@@ -70,9 +70,9 @@ export const PuppeteerStrings: React.FC<StringsProps> = ({
           </feMerge>
         </filter>
 
-        {/* High Voltage String Glow Filter */}
+        {/* Active High-Voltage String Glow Filter */}
         <filter id="crimson-string-glow-active" x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur stdDeviation="4.5" result="blur1" />
+          <feGaussianBlur stdDeviation="5" result="blur1" />
           <feGaussianBlur stdDeviation="1.5" result="blur2" />
           <feMerge>
             <feMergeNode in="blur1" />
@@ -91,27 +91,27 @@ export const PuppeteerStrings: React.FC<StringsProps> = ({
           const pathD = `M ${barPt.x} ${barPt.y} Q ${midX} ${midY} ${eyelet.x} ${eyelet.y}`;
 
           return (
-            <g key={`left-string-${i}`}>
-              {/* Outer soft glow line */}
+            <g key={`left-str-${i}`}>
+              {/* Outer Crimson Glow Line */}
               <motion.path
                 d={pathD}
                 stroke={isLeftHovered ? '#D92525' : '#B81D1D'}
                 strokeWidth={isLeftHovered ? '2.5' : '1.8'}
-                strokeOpacity={isLeftHovered ? '0.95' : '0.75'}
+                strokeOpacity={isLeftHovered ? '0.95' : '0.8'}
                 fill="none"
                 strokeLinecap="round"
                 transition={{ type: 'spring', stiffness: 300, damping: 20 }}
               />
-              {/* Inner bright core line */}
+              {/* Inner Bright White Core */}
               <motion.path
                 d={pathD}
                 stroke="#FFFFFF"
-                strokeWidth="0.75"
-                strokeOpacity={isLeftHovered ? '0.85' : '0.45'}
+                strokeWidth="0.8"
+                strokeOpacity={isLeftHovered ? '0.9' : '0.5'}
                 fill="none"
                 strokeLinecap="round"
               />
-              {/* Top and bottom attachment rings */}
+              {/* Attachment Anchor Dots */}
               <circle cx={barPt.x} cy={barPt.y} r="2.5" fill="#D92525" opacity="0.9" />
               <circle cx={eyelet.x} cy={eyelet.y} r="3" fill="#D92525" opacity="0.95" />
             </g>
@@ -128,27 +128,27 @@ export const PuppeteerStrings: React.FC<StringsProps> = ({
           const pathD = `M ${barPt.x} ${barPt.y} Q ${midX} ${midY} ${eyelet.x} ${eyelet.y}`;
 
           return (
-            <g key={`right-string-${i}`}>
-              {/* Outer soft glow line */}
+            <g key={`right-str-${i}`}>
+              {/* Outer Crimson Glow Line */}
               <motion.path
                 d={pathD}
                 stroke={isRightHovered ? '#D92525' : '#B81D1D'}
                 strokeWidth={isRightHovered ? '2.5' : '1.8'}
-                strokeOpacity={isRightHovered ? '0.95' : '0.75'}
+                strokeOpacity={isRightHovered ? '0.95' : '0.8'}
                 fill="none"
                 strokeLinecap="round"
                 transition={{ type: 'spring', stiffness: 300, damping: 20 }}
               />
-              {/* Inner bright core line */}
+              {/* Inner Bright White Core */}
               <motion.path
                 d={pathD}
                 stroke="#FFFFFF"
-                strokeWidth="0.75"
-                strokeOpacity={isRightHovered ? '0.85' : '0.45'}
+                strokeWidth="0.8"
+                strokeOpacity={isRightHovered ? '0.9' : '0.5'}
                 fill="none"
                 strokeLinecap="round"
               />
-              {/* Top and bottom attachment rings */}
+              {/* Attachment Anchor Dots */}
               <circle cx={barPt.x} cy={barPt.y} r="2.5" fill="#D92525" opacity="0.9" />
               <circle cx={eyelet.x} cy={eyelet.y} r="3" fill="#D92525" opacity="0.95" />
             </g>
